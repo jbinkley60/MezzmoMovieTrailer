@@ -1,0 +1,6 @@
+u:\mezzmo_channels\	                        # Local path to Mezzmo Channels folder
+e:\mezzmo_channels\                             # Mezzmo path to Mezzmo Channels folder  
+20	      		                        # Number of movie trailers to keep by type (0-50)
+1080						# Max resolution (1080, 720 or 480)
+logfile.txt					# Logfile
+mkv						# Output format.  mp4 or mkv.  mp4 is default. 
