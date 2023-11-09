@@ -23,7 +23,7 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 -  Ensure you have Python installed on Windows. Minimum version 3.x
 -  Unzip file into an empty folder on your system
 -  The zipfile contains 2 folders, client and server
--  The client folder stays on your local workstation and contains the downloader
+-  The client folder stays on your local workstation and contains the trailer downloader
 -  The server folder goes onto your Mezzmo server in the Mezzmo Channels folder
 -  The Mezzmo channels folder is typically located at c:\ProgramData\Conceiva\Mezzmo\Plugins\   
 -  Edit the config.text client file with the location of your trailer folder and preferred output format
@@ -34,6 +34,7 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 -  Next install the Mezzmo Movie Trailers Channel 2 into Mezzmo
 -  Open the Mezzmo Movie Trailers Channel 2 in the Mezzmo GUI and set the trailer path location in Properties->Settings       
 
+<br>
    
 ## Command line arguments:  (Limit 1 at a time)
 
