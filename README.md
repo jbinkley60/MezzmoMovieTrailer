@@ -11,10 +11,10 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - Option for how many movies to keep for each category (1-20) <b>Future</b>
 - Option to set output trailer output format to mp4 or mkv 
 - Full detailed logfile
-- Full Mezzmo Movie Trailer channel statistics
+- Full Mezzmo Movie Trailer channel statistics <b>Future</b>
 - CSV export of trailer information and checker history 
 - Command line backups of Mezzmo Trailer Channel database
-- User ability to clear trailer information by movie category <b>Future</b> 
+- User ability to clear trailer information by movie category 
 <br/>
 
 ## Installation and usage:
@@ -43,6 +43,7 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - <b>trailers pop</b>   -  Checks for Popular movies <br>
 - <b>trailers top</b>   -  Checks for Top Rated movies <br>
 - <b>trailers all</b>   -  Checks for all for movie categories - Future <br> 
+- <b>clean category</b> -  Clears trailer database info for movies by category and deletes downloaded trailer file <br> 
 - <b>csv trailers</b>   -  Creates a CSV file with the trailer information in the Mezzmo Trailer Checker<br> 
 - <b>csv history</b>    -  Creates a CSV file with the history information in the Mezzmo Trailer Checker<br>
 - <b>backup</b>         -  Creates a time stamped file name backup of the Mezzmo Trailer Checker database <br> 
