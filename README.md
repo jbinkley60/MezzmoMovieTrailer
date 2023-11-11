@@ -45,9 +45,9 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - <b>trailers top</b>   -  Checks for Top Rated movies <br>
 - <b>trailers all</b>   -  Checks for all for movie categories - Future <br> 
 - <b>clean category</b> -  Clears trailer database info for movies by category and deletes downloaded trailer file <br> 
-- <b>csv trailers</b>   -  Creates a CSV file with the trailer information in the Mezzmo Trailer Checker<br> 
-- <b>csv history</b>    -  Creates a CSV file with the history information in the Mezzmo Trailer Checker<br>
-- <b>backup</b>         -  Creates a time stamped file name backup of the Mezzmo Trailer Checker database <br> 
+- <b>csv trailers</b>   -  Creates a CSV file with the trailer information in the Mezzmo Movie Trailers Channel<br> 
+- <b>csv history</b>    -  Creates a CSV file with the history information in the Mezzmo Movie Trailers Channel<br>
+- <b>backup</b>         -  Creates a time stamped file name backup of the Mezzmo Movie Trailers Channel database <br> 
           
           
 
