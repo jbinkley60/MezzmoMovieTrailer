@@ -73,7 +73,7 @@ def getTrailerDetails(db, tmdb_id):
         else:
             item.sort_title = item.title
         item.type = "video"
-        if MovieTrailerSettings['trcategory'].lower() in ['video', 'movie']:
+        if MovieTrailerSettings['trcategory'].lower() in ['video', 'movie', 'trailer']:
             item.category = MovieTrailerSettings['trcategory']
         item.themoviedb_id = trtuple[0]
         item.uri = trtuple[1]
@@ -190,7 +190,7 @@ def get_prefs(language):
     pref_3 = MezzmoSetting()
     pref_3.id = "trcategory"
     pref_3.type = "text"
-    pref_3.label = "Trailer media category type Video or Movie.  Default is Video ?  "
+    pref_3.label = "Trailer media category type Video, Movie, or Trailer.  Default is Video ?  "
     pref_3.description = "Enable trailer media category type "
     pref_3.text_hide_value = 0
     pref_3.default_value = "Video"
@@ -242,7 +242,7 @@ def mezzmo_get_plugins(language):
     plugin = MezzmoPluginContentProvider()
     plugin.id = "mezzmo.plugin.MovieTrailers"
     plugin.title = "Movie Trailers 2"
-    plugin.version = "0.0.2"
+    plugin.version = "0.0.3"
     plugin.author = "Conceiva Pty. Ltd., jbinkley60"
     plugin.web_link = "https://www.themoviedb.org/"
     plugin.description = 'View movie trailers for current and upcoming movie releases.\n\nTrailer information provided by www.themoviedb.org.'
@@ -325,7 +325,6 @@ def genLog(mgenlog):                                        #  Write to logfile
 
         logoutfile = MovieTrailerSettings['mezchannelpath'].rstrip('\\') + '\\trailers\\logfile.txt'
 
-        #logoutfile = 'e:\\mezzmo_channels\\logfile.txt'
         fileh = open(logoutfile, "a")                       #  open logf file
         currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
         data = fileh.write(currTime + ' - ' + mgenlog + '\n')
