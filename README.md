@@ -50,7 +50,8 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - <b>csv history</b>    -  Creates a CSV file with the history information <br>
 - <b>stats</b>          -  Generates summary statistics for trailers <br>
 - <b>backup</b>         -  Creates a time stamped file name backup of the Mezzmo Movie Trailers Channel database <br> 
-          
+
+<br>          
 
 Visit the <a href="https://github.com/Conceiva/MovieTrailer/wiki">Mezzmo Movie Trailers Channel wiki</a> for the latest information.          
 
