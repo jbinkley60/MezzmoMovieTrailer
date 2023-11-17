@@ -53,8 +53,8 @@ def getTrailerDetails(db, tmdb_id):
         return None
 
     trcurr = db.execute('select tmdb_id, mezzmoTrURL, trType, trTitle, trOverview, trTagline, trRelease_date, trImdb_id, trWebsite, \
-    trPoster_path, trBackdrop_path, trUser_rating, trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer from      \
-    mTrailers where tmdb_id = ?', (tmdb_id,))
+    trPoster_path, trBackdrop_path, trUser_rating, trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1     \
+    from mTrailers where tmdb_id = ?', (tmdb_id,))
     trtuple = trcurr.fetchone()
     #genLog(str(trtuple))
     
@@ -80,6 +80,8 @@ def getTrailerDetails(db, tmdb_id):
         item.description = trtuple[4]
         item.tagline = trtuple[5]
         item.release_date = trtuple[6]
+        if len(trtuple[6]) == 10:
+            item.year = trtuple[6][:4]
         if len(MovieTrailerSettings['trkeyword']) > 2:
             item.keywords = MovieTrailerSettings['trkeyword']
         item.imdb_id = trtuple[7]
@@ -87,6 +89,7 @@ def getTrailerDetails(db, tmdb_id):
         item.poster_uri = trtuple[9]
         item.backdrop_uri = trtuple[10]
         item.user_rating = trtuple[11]
+        item.album_series = trtuple[17]
         if trtuple[12]:
             genre_text = ''
             genre_text = trtuple[12].split('##')
@@ -157,7 +160,7 @@ def openTrailerDB():
 
     global MovieTrailerSettings
 
-    trailerdb = MovieTrailerSettings['mezchannelpath'].rstrip('\\') + '\\trailers\\mezzmo_trailers.db'
+    trailerdb = MovieTrailerSettings['mezchannelpath'].rstrip('\\') + '\\movies\\trailers\\mezzmo_trailers.db'
 
     if 'n' not in MovieTrailerSettings['detlogging'].lower():
         genLog(trailerdb)
@@ -240,9 +243,9 @@ def mezzmo_get_plugins(language):
     # define Movie Trailers plugin details
     plugins = []
     plugin = MezzmoPluginContentProvider()
-    plugin.id = "mezzmo.plugin.MovieTrailers"
+    plugin.id = "mezzmo.plugin.MovieTrailers2"
     plugin.title = "Movie Trailers 2"
-    plugin.version = "0.0.3"
+    plugin.version = "2.0.0"
     plugin.author = "Conceiva Pty. Ltd., jbinkley60"
     plugin.web_link = "https://www.themoviedb.org/"
     plugin.description = 'View movie trailers for current and upcoming movie releases.\n\nTrailer information provided by www.themoviedb.org.'

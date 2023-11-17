@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 0.0.3'
+version = 'version 2.0.0'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -98,8 +98,9 @@ def getConfig():
         fileh.close()                                                  # close the file
         
         tr_config = {
-                     'ltrailerloc': ltrailerloc,
-                     'mtrailerloc': mtrailerloc,
+                     'baseloc': ltrailerloc,
+                     'ltrailerloc': ltrailerloc + '\\movies',
+                     'mtrailerloc': mtrailerloc + '\\movies',
                      'mcount': tkeepcount,
                      'maxres': maxres,
                      'logoutfile': logoutfile,
@@ -150,6 +151,7 @@ def displayHelp(sysarg1):                                 #  Command line help m
         print('trailers all\t - Checks for all for movie categories ')
         print('\nclean category\t - Clears trailer database info for movies by category and deletes downloaded trailer file')
         print('\t\t   Valid types are: now, up, pop,top, all') 
+        print('clean files\t - Analyzes trailer files and database entries for missing files and entries')
         print('\ncsv trailers\t - Creates a CSV file with the trailer information')
         print('csv history\t - Creates a CSV file with the history information')
         print('\nstats\t\t - Generates summary statistics for trailers')
@@ -158,13 +160,11 @@ def displayHelp(sysarg1):                                 #  Command line help m
         print('\n ')
 
 
-def getMezzmoTrailers(sysarg1= '', sysarg2= ''):              #  Get Movie Channel Trailers  
+def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie Channel Trailers  
     
     global tr_config
     global dupcount, totcount 
     mtype = []                                                # list of trailers for a given type
-
-    page = 1  
 
     try:
         if not sysarg1.lower() in ['trailers', 'sync']:
@@ -184,6 +184,10 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= ''):              #  Get Movie Chann
         elif sysarg2.lower() == 'all':
             mtype = ['now_playing', 'upcoming', 'popular', 'top_rated']
 
+        if len(sysarg3) > 0 and sysarg3.isdigit():            # Allow for more trailers
+            page = int(sysarg3)
+        else:
+            page = 1
 
         for type in mtype:
             jresponse = urllib.request.urlopen(MOVIETRAILERS_URL_LIST.format(type, 'page=' + str(page)))
@@ -192,7 +196,9 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= ''):              #  Get Movie Chann
             jresponse.close()
     
             if json_obj.get('results'):
-                print('Number of movies ' + type + ' found: ' + str(len(json_obj['results'])))
+                mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results']))
+                genLog(mgenlog)
+                print(mgenlog)
                 for trailer in json_obj['results']:
                     item = getTrailerDetails(trailer['id'])
                     if item != None:
@@ -205,6 +211,7 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= ''):              #  Get Movie Chann
                                 if trname != 0:                      # Trailer file reencoded                              
                                     moveTrailers(trname)             # Move trailer to trailer folder
                                     updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
+                                    getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
                             #print(str(trresults))
                             totcount += 1
                         else:
@@ -256,6 +263,7 @@ def getTrailerDetails(id):
                  'production_company': '',
                  'content_rating': '',
                  'artist_actor': '',
+                 'album_series': '',
                  'composer_director_creator': ''
                }
         
@@ -287,6 +295,8 @@ def getTrailerDetails(id):
                             json_obj['backdrop_path'])
                         if json_obj.get('vote_average'):
                             item['user_rating'] = int((json_obj.get('vote_average') + 0.5)/2.0)
+                        if json_obj.get('belongs_to_collection'):
+                            item['album_series'] = json_obj.get('belongs_to_collection')['name']
                         if json_obj.get('genres'):
                             genres = json_obj['genres']
                             for genre in genres:
@@ -353,19 +363,23 @@ def checkTrailer(item, mtype):                             # Check if trailer / 
         del trcurr
 
         if trtuple:
-            print('Movie already in database, skipping: ' + item['title'])
+            mgenlog = 'Movie already in database, skipping: ' + item['title']
+            genLog(mgenlog)
+            print(mgenlog)
             found = 1
         else:
-            print('New movie found: ' + str(item['title']))
+            mgenlog = 'New movie found: ' + str(item['title'])
+            genLog(mgenlog)
+            print(mgenlog)
             currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,  \
+            db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,      \
             trTagline, trRelease_date, trImdb_id, trWebsite, trPoster_path, trBackdrop_path, trUser_rating,  \
-            trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer ) values                  \
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime, item['tmdb_id'],             \
+            trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1 ) values            \
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime, item['tmdb_id'],          \
             item['uri'], mtype, item['title'],  item['description'], item['tagline'], item['release_date'],  \
             item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'], item['user_rating'], \
             str(item['genre']), str(item['production_company']), item['content_rating'],                     \
-            str(item['artist_actor']), str(item['composer_director_creator']) ))
+            str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'], ))
             db.commit()    
             found = 0
         db.close()
@@ -399,9 +413,9 @@ def checkDatabase():
         db.execute('CREATE table IF NOT EXISTS mTrailers (dateAdded TEXT, tmdb_id INTEGER, trailerUri TEXT,    \
         localTrURL TEXT, mezzmoTrURL TEXT, trType TEXT, trTitle TEXT, trOverview TEXT, trTagline TEXT,         \
         trRelease_date TEXT, trImdb_id TEXT, trWebsite TEXT, trPoster_path TEXT, locPoster_path TEXT,          \
-        mezPoster_path TEXT, trBackdrop_path TEXT, locBackdrop_path TEXT, mezBackdrop_path TEXT, trUser_rating \
-        INTEGER, trGenres TEXT, trProd_company TEXT, trContent_rating TEXT, trArtist_actor TEXT, trComposer    \
-        TEXT, lastchecked TEXT, tr_resol INTEGER, tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
+        trBackdrop_path TEXT, locBackdrop_path TEXT, trUser_rating INTEGER, trGenres TEXT, trProd_company TEXT,\
+        trContent_rating TEXT, trArtist_actor TEXT, trComposer TEXT, lastchecked TEXT, tr_resol INTEGER,       \
+        tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
 
         db.execute('CREATE INDEX IF NOT EXISTS trailer_1 ON mTrailers (dateAdded)')
         db.execute('CREATE UNIQUE INDEX IF NOT EXISTS trailer_2 ON mTrailers (trailerUri)')
@@ -412,9 +426,9 @@ def checkDatabase():
         db.execute('CREATE table IF NOT EXISTS mHistory (dateAdded TEXT, tmdb_id INTEGER, trailerUri TEXT,     \
         localTrURL TEXT, mezzmoTrURL TEXT, trType TEXT, trTitle TEXT, trOverview TEXT, trTagline TEXT,         \
         trRelease_date TEXT, trImdb_id TEXT, trWebsite TEXT, trPoster_path TEXT, locPoster_path TEXT,          \
-        mezPoster_path TEXT, trBackdrop_path TEXT, locBackdrop_path TEXT, mezBackdrop_path TEXT, trUser_rating \
-        INTEGER, trGenres TEXT, trProd_company TEXT, trContent_rating TEXT, trArtist_actor TEXT, trComposer    \
-        TEXT, lastchecked TEXT, tr_resol INTEGER, tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
+        trBackdrop_path TEXT, locBackdrop_path TEXT, trUser_rating INTEGER, trGenres TEXT, trProd_company TEXT,\
+        trContent_rating TEXT, trArtist_actor TEXT, trComposer TEXT, lastchecked TEXT, tr_resol INTEGER,       \
+        tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
 
         db.execute('CREATE INDEX IF NOT EXISTS htrailer_1 ON mHistory (dateAdded)')
         db.execute('CREATE INDEX IF NOT EXISTS htrailer_2 ON mHistory (trailerUri)')
@@ -425,9 +439,9 @@ def checkDatabase():
         db.execute('CREATE table IF NOT EXISTS mTemp (dateAdded TEXT, tmdb_id INTEGER, trailerUri TEXT,        \
         localTrURL TEXT, mezzmoTrURL TEXT, trType TEXT, trTitle TEXT, trOverview TEXT, trTagline TEXT,         \
         trRelease_date TEXT, trImdb_id TEXT, trWebsite TEXT, trPoster_path TEXT, locPoster_path TEXT,          \
-        mezPoster_path TEXT, trBackdrop_path TEXT, locBackdrop_path TEXT, mezBackdrop_path TEXT, trUser_rating \
-        INTEGER, trGenres TEXT, trProd_company TEXT, trContent_rating TEXT, trArtist_actor TEXT, trComposer    \
-        TEXT, lastchecked TEXT, tr_resol INTEGER, tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
+        trBackdrop_path TEXT, locBackdrop_path TEXT, trUser_rating INTEGER, trGenres TEXT, trProd_company TEXT,\
+        trContent_rating TEXT, trArtist_actor TEXT, trComposer TEXT, lastchecked TEXT, tr_resol INTEGER,       \
+        tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
 
         db.execute('CREATE INDEX IF NOT EXISTS tetrailer_1 ON mTemp (dateAdded)')
         db.execute('CREATE UNIQUE INDEX IF NOT EXISTS tetrailer_2 ON mTemp (trailerUri)')
@@ -456,8 +470,8 @@ def updateTempHist(tmdb_id, trname, trsize, trres):                       # Upda
         global tr_config, trailerdb                                       # Get config information
         db = openTrailerDB()
 
-        newmtrailer = tr_config['mtrailerloc'] + 'trailers\\' + trname    # Mezzmo trailer name
-        newctrailer = tr_config['ltrailerloc'] + 'trailers\\' + trname    # Local trailer name 
+        newmtrailer = tr_config['mtrailerloc'] + '\\trailers\\' + trname  # Mezzmo trailer name
+        newctrailer = tr_config['ltrailerloc'] + '\\trailers\\' + trname  # Local trailer name 
         resolution =  int(trres.strip('p'))                               # Resolution as number 
         db.execute('UPDATE mTemp SET LocalTrURL=?, mezzmoTrURL=?, tr_resol=?, tr_size=? WHERE tmdb_id=?', \
         (newctrailer, newmtrailer, resolution, trsize, tmdb_id,)) 
@@ -496,7 +510,7 @@ def checkFormats(trailfile):                                             # Check
         print(mgenlog)
         genLog(mgenlog)
         #print('Format file names: ' + trailer_name + '  ' + convert_name)
-        frcommand = 'ffmpeg.exe -i ' +  curr_trailer + ' -vcodec copy -acodec copy ' + new_trailer + ' >nul 2>nul'
+        frcommand = 'ffmpeg.exe -i ' +  curr_trailer + ' -vcodec copy -acodec copy -y ' + new_trailer + ' >nul 2>nul'
         #print(frcommand)
         os.system(frcommand)
         #print('Trailer file names: ' + curr_trailer + '  ' + new_trailer)
@@ -528,6 +542,54 @@ def openTrailerDB():
     db = sqlite.connect(trailerdb)
 
     return db
+
+
+def getArtwork(tmdb_id, posterUrl, backDropUrl):                         #  Get trailer artwork 
+
+    global tr_config
+
+    try:
+        #print(tr_config['ltrailerloc'])
+        newmposter = 'file://' + tr_config['mtrailerloc'] +   \
+        '\\artwork\\' +  str(tmdb_id) + '_poster.jpg'                    # Mezzmo poster name
+        newlposter = tr_config['ltrailerloc'] + '\\artwork\\'   \
+        + str(tmdb_id) + '_poster.jpg'                                   # Local poster name
+        newmbackd = 'file://' + tr_config['mtrailerloc'] +    \
+        '\\artwork\\' + str(tmdb_id) + '_backdrop.jpg'                   # Mezzmo backdrop name
+        newlbackd = tr_config['ltrailerloc'] + '\\artwork\\'    \
+        + str(tmdb_id) + '_backdrop.jpg'                                 # Local backdrop name
+
+        mgenlog = 'Fetching trailer artwork'
+        genLog(mgenlog)
+        print(mgenlog)
+   
+        resource = urllib.request.urlopen(posterUrl)
+        output = open(newlposter,"wb")
+        output.write(resource.read())
+        output.close()    
+
+        resource = urllib.request.urlopen(backDropUrl)
+        output = open(newlbackd,"wb")
+        output.write(resource.read())
+        output.close() 
+
+        db = openTrailerDB()
+        db.execute('UPDATE mTrailers SET trPoster_path=?, trBackdrop_path=?, \
+        locPoster_path=?, locBackdrop_path=? WHERE tmdb_id=?', (newmposter,  \
+        newmbackd, newlposter, newlbackd, tmdb_id,)) 
+
+        db.commit()
+        db.close() 
+
+        mgenlog = 'Trailer artwork fetching successful'
+        genLog(mgenlog)    
+        print(mgenlog)
+
+    except Exception as e:
+        print (e)
+        mgenlog = 'There was a problem fetching the trailer artwork'
+        genLog(mgenlog)
+        print(mgenlog)
 
 
 def getTrailer(trailer, imdbtitle = ''):                   # Download You Tube \ IMDB trailers
@@ -636,114 +698,28 @@ def getFormats(trailer,imdbtitle = ''):             # Get available You Tube Tra
         genLog(mgenlog) 
 
 
-def convertTrailer(trailerfile, trfps, checktr=''):  # Adjust frame rate and audio level, if needed
-
-    try:
-        if 'check' in checktr.lower() or not os.path.isfile(trailerfile): # Check or trailer deleted
-            return trfps           
-        global tr_config
-        trfrate = tr_config['trfrate']
-        trback = tr_config['trback']
-        ltrailerloc = tr_config['ltrailerloc']
-        audiolvl = tr_config['audiolvl']        
-        hwenc = tr_config['hwenc']
-
-        if trfrate == '0' and audiolvl == '100':                            # Frame rate and audio changes disabled
-            return trfps
-        elif (trfrate == trfps) and audiolvl == '100':                      # No changes needed
-            mgenlog = "No adjustments needed for: " + trailerfile
-            genLog(mgenlog)
-            print(mgenlog)
-            return trfps       
-        elif (trfrate != '0' and trfrate != trfps) or audiolvl == '100':    # Adjust frame rate only
-            #print('Frame rate mismatch for: ' + trfrate + ' ' + trfps + ' ' + trailerfile)
-            if 'yes' in trback.lower():
-                backuploc = os.path.join(ltrailerloc, "backup")
-                command = "copy " + trailerfile + " " + backuploc + " >nul 2>nul"
-                os.system(command)                  # Rename trailer file to trimmed newname                
-                mgenlog = 'Backup trailer successful: ' + trailerfile
-                genLog(mgenlog)
-                print(mgenlog)
-            if hwenc.lower() in ['nevc']:                                   # nVidia HW encoding
-                frcommand = "ffmpeg -i " + trailerfile + " -c:v h264_nvenc -filter:v fps=" + trfrate + " converted.mp4 >nul 2>nul"
-            else:
-                frcommand = "ffmpeg -i " + trailerfile + " -filter:v fps=" + trfrate + " converted.mp4 >nul 2>nul"
-            #print(frcommand)
-            mgenlog = "Ajusting frame rate to " + trfrate + " for: " + trailerfile
-        elif trfrate != '0' and trfrate != trfps and audiolvl != '100':    # Adjust frame rate and audio
-            if 'yes' in trback.lower():
-                backuploc = os.path.join(ltrailerloc, "backup")
-                command = "copy " + trailerfile + " " + backuploc + " >nul 2>nul"
-                os.system(command)                  # Rename trailer file to trimmed newname                
-                mgenlog = 'Backup trailer successful: ' + trailerfile
-                genLog(mgenlog)
-                print(mgenlog)
-            volvl = str(float(audiolvl)/100)
-            if hwenc.lower() in ['nevc']:                                   # nVidia HW encoding
-                frcommand = "ffmpeg -i " + trailerfile + " -c:v h264_nvenc -filter:v fps=" + trfrate +    \
-                "-filter:a volume=" + volvl + " converted.mp4 >nul 2>nul"
-            else:
-                frcommand = "ffmpeg -i " + trailerfile + " -filter:v fps=" + trfrate + "-filter:a volume=" + volvl \
-                + " converted.mp4 >nul 2>nul"
-            #print(frcommand)
-            mgenlog = "Ajusting frame rate and audio to " + trfrate + ":" + audiolvl + " for: " + trailerfile
-        elif (trfrate == '0' or trfrate == trfps) and audiolvl != '100':    # Adjust audio only
-            if 'yes' in trback.lower():
-                backuploc = os.path.join(ltrailerloc, "backup")
-                command = "copy " + trailerfile + " " + backuploc + " >nul 2>nul"
-                os.system(command)                  # Rename trailer file to trimmed newname                
-                mgenlog = 'Backup trailer successful: ' + trailerfile
-                genLog(mgenlog)
-                print(mgenlog)
-            volvl = str(float(audiolvl)/100)
-            if hwenc.lower() in ['nevc']:                                   # nVidia HW encoding
-                frcommand = "ffmpeg -i " + trailerfile +  " -c:v h264_nvenc -filter:a volume=" \
-                + volvl + " converted.mp4 >nul 2>nul"
-            else:
-                frcommand = "ffmpeg -i " + trailerfile +  " -filter:a volume=" + volvl \
-                + " converted.mp4 >nul 2>nul"
-            #print(frcommand)
-            mgenlog = "Ajusting audio volume to " + audiolvl + " for: " + trailerfile
-
-        genLog(mgenlog)
-        print(mgenlog)
-        genLog(frcommand)
-        os.system(frcommand)
-        if ltrailerloc not in trailerfile:
-            copytrailer = os.path.join(ltrailerloc, trailerfile)
-        else:
-            copytrailer = trailerfile
-        mvcommand =  "copy converted.mp4 " + copytrailer + " /y >nul 2>nul"  
-        genLog(mvcommand)
-        os.system(mvcommand)
-
-        command = 'del *.mp4 /q >nul 2>nul'          #  Remove old converted files
-        os.system(command)                           #  Clear converted files
-        return trfrate
-
-    except Exception as e:
-        print (e)
-        mgenlog = "There was a problem converting the trailer: " + trailerurl
-        print(mgenlog)
-        genLog(mgenlog) 
-
-
 def checkFolders():                                # Check folders and files
 
     try:
         global tr_config, trailerdb
+        baseloc = tr_config['baseloc']
         trailerloc = tr_config['ltrailerloc']
         if not os.path.exists('temp'):             #  Check temp files location
             os.makedirs('temp')
-        command = 'del temp\*.mp4 >nul 2>nul'      #  Delete temp files if exist 
+        command = 'del temp\*.mp* >nul 2>nul'      #  Delete temp files if exist 
         os.system(command)                         #  Clear temp files
         command = 'del *.mp4 >nul 2>nul'           #  Remove old converted files
         os.system(command)                         #  Clear converted files
-        if not os.path.exists(trailerloc):         #  Check trailer files location
+        if not os.path.exists(baseloc):            #  Check trailer files base location
             mgenlog = 'Local trailer file location does not exist.  Mezzmo Movie Trailer Channel exiting.'  
             genLog(mgenlog)
             print(mgenlog)            
             sys.exit()
+        if not os.path.exists(trailerloc):         #  Check movie trailers file location
+            os.makedirs(trailerloc)
+            mgenlog = 'Local trailer file location does not exist.  Local file location created.'  
+            genLog(mgenlog)
+            print(mgenlog)            
         ltrailersloc = os.path.join(trailerloc, "trailers")        
         if not os.path.exists(ltrailersloc):       #  Check trailer files location       
             os.makedirs(ltrailersloc)
@@ -757,7 +733,7 @@ def checkFolders():                                # Check folders and files
             mgenlog = 'Trailer backup file location did not exist.  Backup folder created.'  
             genLog(mgenlog)
             print(mgenlog)
-        ltrailersloc = os.path.join(trailerloc, "trailers\\artwork")        
+        ltrailersloc = os.path.join(trailerloc, "artwork")        
         if not os.path.exists(ltrailersloc):       #  Check artwork files location       
             os.makedirs(ltrailersloc)
             mgenlog = 'Trailers artwork folder location did not exist.  Trailers artwork folder created.'  
@@ -873,8 +849,8 @@ def renameFiles(imdbtitle = ''):                    # Rename trailer file names 
 def moveTrailers(trfile):                           # Move trailers to trailer location
 
     try:
-        global tr_config                            # Get locatal path to trailer lcoation
-        trailerloc = tr_config['ltrailerloc'] + 'trailers'
+        global tr_config                            # Get locaal path to trailer lcoation
+        trailerloc = tr_config['ltrailerloc'] + '\\trailers'
 
         command = "move temp\\" + trfile + " " + trailerloc + " >nul 2>nul"
         #print(command)
@@ -899,15 +875,15 @@ def checkCsv(sysarg1 = '', sysarg2 = ''):           # Generate CSV files
             
         db = openTrailerDB()
         fpart = datetime.now().strftime('%H%M%S')
-        if sysarg2.lower() == 'trailer':
-            curm = db.execute('SELECT * FROM mTrailers ORDER BY dateAdded')
+        if sysarg2.lower() == 'trailers':
+            curm = db.execute('SELECT * FROM mTrailers ORDER BY dateAdded ASC')
             filename = 'meztrailers_' + fpart + '.csv'
         elif sysarg2.lower() == 'history':
             curm = db.execute('SELECT * FROM mHistory')
             filename = 'mezhistory_' + fpart + '.csv'          
-
+    
         headers = [i[0] for i in curm.description]      
-        recs = curm.fetchall()
+        recs = curm.fetchall()   
         writeCSV(filename, headers, recs)
         del curm
         db.close()
@@ -930,6 +906,9 @@ def writeCSV(filename, headers, recs):
                     recitem = str(row[item])
                 else:
                     recitem = row[item]
+
+                if "##" in str(recitem):
+                    recitem = recitem.replace('##', ', ')
                 recsencode.append(recitem) 
             csvFile.writerow(recsencode)               
 
@@ -937,7 +916,7 @@ def writeCSV(filename, headers, recs):
         print (e)
         mgenlog = 'An error occurred creating the CSV file.'
         genLog(mgenlog)
-        pring(mgenlog)
+        print(mgenlog)
 
 
 def checkFinish(sysarg1, sysarg2):                           # Successfully finished
@@ -983,7 +962,7 @@ def makeBackups():                                   # Make database backups
         global tr_config                            # Get locatal path to trailer lcoation
         trailerloc = tr_config['ltrailerloc']
 
-        DB = trailerloc + 'trailers\\backup\\mezzmo_trailers_' +             \
+        DB = trailerloc + '\\trailers\\backup\\mezzmo_trailers_' +             \
         datetime.now().strftime('%m%d%Y-%H%M%S') + '.db'
         #print(DB)
         dbout = sqlite.connect(DB)
@@ -1010,7 +989,7 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
 
         if sysarg1.lower() not in ['clean']:
             return
-        elif sysarg2.lower() not in ['now', 'up', 'top', 'pop', 'all']: 
+        elif sysarg2.lower() not in ['now', 'up', 'top', 'pop', 'all', 'files']: 
             return
 
         if sysarg2.lower() == 'now':
@@ -1023,6 +1002,9 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
             mtype = 'popular'
         elif sysarg2.lower() == 'all':
             mtype = 'all'
+        elif sysarg2.lower() == 'files':
+            checkFiles()    
+            return
 
         global tr_config
         ltrailerloc = tr_config['ltrailerloc']       # Get local path to trailer lcoation
@@ -1031,10 +1013,11 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
         if sysarg2.lower() not in ['files']:
             db = openTrailerDB()
             if mtype == 'all':
-                dbcurr = db.execute('SELECT tmdb_id, localTrURL, trTitle from mTrailers ')            
+                dbcurr = db.execute('SELECT tmdb_id, localTrURL, trTitle, locPoster_path,  \
+                locBackdrop_path from mTrailers ')            
             else:
-                dbcurr = db.execute('SELECT tmdb_id, localTrURL, trTitle from mTrailers    \
-                WHERE trType=? ', (mtype,))
+                dbcurr = db.execute('SELECT tmdb_id, localTrURL, trTitle, locPoster_path,  \
+                locBackdrop_path from mTrailers WHERE trType=? ', (mtype,))
             dbtuples = dbcurr.fetchall() 
             if len(dbtuples) == 0:
                 mgenlog = 'No trailers found with movie type: ' + str(mtype)
@@ -1044,7 +1027,9 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
                 db.close()
                 return
             else:
-                print('\nNumber of movie trailers to clean: ' + str(len(dbtuples)) + '\n')
+                mgenlog = 'Number of movie trailers to clean: ' + str(len(dbtuples))
+                genLog(mgenlog)
+                print('\n' + mgenlog  + '\n')
                 for n in range(len(dbtuples)):
                     print(str(dbtuples[n][2]))
                 choice = input('\nDo you want to delete these movie trailers (Y/N) ?  \n')
@@ -1057,8 +1042,14 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
                 else:
                     delcount = 0
                     for x in range(len(dbtuples)):
-                        command = "del " + dbtuples[x][1] + " >nul 2>nul"
-                        os.system(command)                    
+                        command = "del " + dbtuples[x][1] + " >nul 2>nul"        # Delete trailer file
+                        os.system(command)
+                        if dbtuples[x][3]:
+                            command = "del " + dbtuples[x][3] + " >nul 2>nul"    # Delete poster file
+                            os.system(command) 
+                        if dbtuples[x][4]:
+                            command = "del " + dbtuples[x][4] + " >nul 2>nul"    # Delete backdrop file
+                            os.system(command)         
                         db.execute('DELETE FROM mTrailers WHERE tmdb_id=?', (dbtuples[x][0],))
                         delcount += 1
                         mgenlog = 'Successfully cleaned movie trailer: ' + dbtuples[x][2]
@@ -1066,10 +1057,107 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
                         print(mgenlog)   
                     db.commit()
                     db.close()
-                    print("\n")
                     mgenlog = 'Number of movie trailers successfully cleaned: ' + str(delcount)
                     genLog(mgenlog)
-                    print(mgenlog)  
+                    print('\n' + mgenlog)  
+
+
+def checkFiles():                                     # Check for orphaned trailer or missing files
+
+
+        global tr_config
+        trailerloc = tr_config['ltrailerloc'] + '\\trailers' 
+
+        db = openTrailerDB()
+
+        nofiles = []
+        notrailers = []
+
+        mgenlog = 'Beginning missing trailer file analysis'
+        genLog(mgenlog)
+        print(mgenlog)
+
+        listOfFiles = os.listdir(trailerloc)          # Get list of trailer files
+        pattern = "*.m*"
+        for x in listOfFiles:                         # Check for matching trailer entry
+            if fnmatch.fnmatch(x, pattern):
+                #print(x)
+                dbcurr = db.execute('SELECT localTrURL FROM mTrailers WHERE localTrURL \
+                LIKE ?', ('%' + x,))
+                dbtuple = dbcurr.fetchone()
+                if not dbtuple:                       # If not found add to list
+                    notrailers.append(x)
+        if len(notrailers) == 0:                      # None found
+            mgenlog = 'No missing trailers found.  All trailers matched.'
+            genLog(mgenlog)
+            print(mgenlog)
+        else:
+            mgenlog = 'Number of movie trailers to clean: ' + str(len(notrailers))
+            genLog(mgenlog)
+            print('\n' + mgenlog  + '\n')
+            for n in range(len(notrailers)):
+                print(str(notrailers[n]))
+            choice = input('\nDo you want to delete these movie trailers (Y/N) ?  \n')
+            if 'n' in choice.lower():
+                mgenlog = 'Movie trailers will not be cleaned'
+                genLog(mgenlog)
+                print(mgenlog)                
+            else:
+                delcount = 0
+                for x in range(len(notrailers)):                
+                    command = 'del "' + trailerloc + '\\' + notrailers[x] + '" >nul 2>nul'
+                    #print(command)
+                    os.system(command)  
+                    delcount += 1
+                    mgenlog = 'Successfully cleaned movie trailer entry: ' + notrailers[x]
+                    genLog(mgenlog)
+                    print(mgenlog)   
+                db.commit()
+                mgenlog = 'Number of movie trailer entries successfully cleaned: ' + str(delcount)
+                genLog(mgenlog)
+                print('\n' + mgenlog)
+
+        mgenlog = 'Beginning missing trailer entry analysis'
+        genLog(mgenlog)
+        print('\n' + mgenlog)     
+ 
+        dbcurr = db.execute('SELECT localTrURL, tmdb_id FROM mTrailers')
+        dbtuple = dbcurr.fetchall()                   # Get entries with missing info
+        if len(dbtuple) > 0:                          # Get all trailer files 
+            for x in range(len(dbtuple)):
+                rpos = dbtuple[x][0].rfind('\\')
+                trname = dbtuple[x][0][rpos + 1:]
+                if trname not in listOfFiles:
+                    nofiles.append(dbtuple[x][0])
+        if len(nofiles) == 0:                         # None found
+            mgenlog = 'No missing trailers entries found.  All trailer entries matched.'
+            genLog(mgenlog)
+            print(mgenlog)
+        else:
+            mgenlog = 'Number of movie trailers entries to clean: ' + str(len(nofiles))
+            genLog(mgenlog)
+            print(mgenlog  + '\n')
+            for n in range(len(nofiles)):
+                print(str(nofiles[n]))
+            choice = input('\nDo you want to delete these movie trailer entries (Y/N) ?  \n')
+            if 'n' in choice.lower():
+                mgenlog = 'Movie trailer entries will not be cleaned'
+                genLog(mgenlog)
+                print(mgenlog)                
+            else:
+                delcount = 0
+                for x in range(len(nofiles)):                
+                    db.execute('DELETE FROM mTrailers WHERE localTrURL=?', (nofiles[x],))
+                    delcount += 1
+                    mgenlog = 'Successfully cleaned movie trailer entry: ' + nofiles[x]
+                    genLog(mgenlog)
+                    print(mgenlog)   
+                db.commit()
+                mgenlog = 'Number of movie trailer entries successfully cleaned: ' + str(delcount)
+                genLog(mgenlog)
+                print('\n' + mgenlog) 
+
+        db.close()
 
 
 def displayStats(sysarg1):                            # Display statistics    
@@ -1081,7 +1169,7 @@ def displayStats(sysarg1):                            # Display statistics
   
         global totcount, dupcount
         global tr_config
-        trailerloc = tr_config['ltrailerloc'] + 'trailers'
+        trailerloc = tr_config['ltrailerloc'] + '\\trailers'
         mtrailerloc = tr_config['mtrailerloc']
 
         print ('\n\n\t ************  Mezzmo Movie Trailers Channel Stats  *************\n')
@@ -1145,13 +1233,12 @@ getConfig()                                                  # Process config fi
 checkFolders()                                               # Check trailer and temp folder locations
 checkDatabase()                                              # Check trailer database
 checkLimits()                                                # Check limits of trailers to keep 
-getMezzmoTrailers(sysarg1, sysarg2)                          # Get Movie Channel Trailers
+getMezzmoTrailers(sysarg1, sysarg2, sysarg3)                 # Get Movie Channel Trailers
 checkCsv(sysarg1, sysarg2)
 cleanTrailers(sysarg1, sysarg2, sysarg3)
 makeBackups()
 displayStats(sysarg1)
+#checkFiles(sysarg1, sysarg2)
 checkFinish(sysarg1, sysarg2)
 
-#checkFiles(sysarg1, sysarg2)
-#checkFinish(sysarg1, sysarg2)
 

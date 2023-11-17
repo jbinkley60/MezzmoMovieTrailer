@@ -6,13 +6,15 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 
 - Get current TMDB movie trailer information for Now Playing, Upcoming, Popular and Top rated movies
 - Download movie trailers for local playback through your Mezzmo server
+- Full movie metadata including plot, actors, artwork, movieset and more 
 - User selectable feature of 480P, 720P or 1080P quality trailers (if available, otherwise best quality available)
 - Automatically move trailers to designated location (i.e. NAS, local disk etc.)
-- Option for how many movies to keep for each category (1-50)
+- Option for how many movies to keep for each category (1-50) with auto deletions
 - Option to set output trailer output format to mp4 or mkv 
 - Full detailed logfile
 - Full Mezzmo Movie Trailers Channel statistics
-- Check and remove orphaned movie trailer files <b>Future</b>
+- Check and remove orphaned movie trailer files
+- Local artwork for improved quality and performance
 - CSV export of trailer information and checker history 
 - Command line backups of Mezzmo Movie Trailers Channel database
 - User ability to clear trailer information by movie category 
