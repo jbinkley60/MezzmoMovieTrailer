@@ -47,7 +47,8 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - <b>trailers pop</b>   -  Checks for Popular movies <br>
 - <b>trailers top</b>   -  Checks for Top Rated movies <br>
 - <b>trailers all</b>   -  Checks for all for movie categories <br> 
-- <b>clean category</b> -  Clears trailer database info for movies by category and deletes downloaded trailer file <br> 
+- <b>clean category</b> -  Clears trailer database info for movies by category and deletes downloaded trailer file <br>
+- <b>clean files</b>    -  Analyzes trailer files and database entries for missing files and entries <br> 
 - <b>csv trailers</b>   -  Creates a CSV file with the trailer information <br> 
 - <b>csv history</b>    -  Creates a CSV file with the history information <br>
 - <b>stats</b>          -  Generates summary statistics for trailers <br>
