@@ -1,0 +1,20 @@
+Upgrading from v2.0.0 to v2.0.1
+
+Because the Mezzmo Movie Trailers Channel has a client and a server compoonent
+and because of a config file and database change a slightly more specific upgrade
+process is required. The client should be upgraded firsta nd then the server.
+
+Client Upgrade Process
+
+1.  Copy the config file and movie_trailers.py file to the folder where 2.0.0 is running
+2.  Edit the config file to your setup.  Note the additional setting on the last line.
+3.  Run the client software once to update the database format. 
+    A "movie_trailers.py stats" command is sufficient
+
+Server Upgrade Process
+
+1.  Copy the MezzmoPlugin.py file to your MovieTrailer2 folder on your Mezzmo server
+2.  Stop the Mezzmo server and Mezzmo GUI
+3.  Restart the Mezzmo GUI and Mezzmo server
+
+At this point everything should be working normally

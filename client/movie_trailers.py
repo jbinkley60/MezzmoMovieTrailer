@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 2.0.0'
+version = 'version 2.0.1'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -95,6 +95,16 @@ def getConfig():
             tformat = datav[0].strip().rstrip("\n").lower()            # cleanup unwanted characters
         else:
             tformat = 'mp4'   
+
+        data = fileh.readline()                                        # Get # of traielrs to fetch by category
+        if data != '':
+            dataj = data.split('#')                                    # Remove comments
+            fetchcount = dataj[0].strip().rstrip("\n").lower()         # cleanup unwanted characters
+            if int(fetchcount) > 40:
+                fetchcount = 20                                        # Default is 20
+        else:
+            fetchcount = 20   
+
         fileh.close()                                                  # close the file
         
         tr_config = {
@@ -105,6 +115,7 @@ def getConfig():
                      'maxres': maxres,
                      'logoutfile': logoutfile,
                      'tformat': tformat,
+                     'fetchcount': fetchcount,
                     }
 
         if not tformat in ['mkv', 'mp4']:
@@ -113,7 +124,7 @@ def getConfig():
             genLog(mgenlog)
             print(mgenlog) 
 
-        configuration = [ltrailerloc, mtrailerloc, tkeepcount, maxres, logoutfile, tformat]
+        configuration = [ltrailerloc, mtrailerloc, tkeepcount, maxres, logoutfile, tformat, fetchcount]
         mgenlog = ("Mezzmo Movie Trailers Channel Checker Client - " + version)
         print(mgenlog)
         genLog(mgenlog)
@@ -184,38 +195,55 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
         elif sysarg2.lower() == 'all':
             mtype = ['now_playing', 'upcoming', 'popular', 'top_rated']
 
-        if len(sysarg3) > 0 and sysarg3.isdigit():            # Allow for more trailers
-            page = int(sysarg3)
+        
+        fetchcount = int(tr_config['fetchcount'])
+        if fetchcount <= 20:
+            pages = ['1']
+        elif fetchcount <= 40:
+            pages = ['2', '1']
         else:
-            page = 1
+            pages = ['1']
+
+        if len(sysarg3) > 0 and sysarg3.isdigit():            # Allow for more trailers by page
+            pages = [str(sysarg3)]
 
         for type in mtype:
-            jresponse = urllib.request.urlopen(MOVIETRAILERS_URL_LIST.format(type, 'page=' + str(page)))
-            json_obj = json.load(jresponse)
-            #print(str(json_obj))
-            jresponse.close()
+            ccount = 0                                        # Category match counter
+            for page in pages:
+                #print('Page number and counters are: ' + page + '  ' + str(ccount))
+                if ccount >= 40:
+                    mgenlog = 'Movie category trailer limit reached: ' + type
+                    genLog(mgenlog)
+                    print(mgenlog)  
+                    break
+
+                jresponse = urllib.request.urlopen(MOVIETRAILERS_URL_LIST.format(type, 'page=' + str(page)))
+                json_obj = json.load(jresponse)
+                #print(str(json_obj))
+                jresponse.close()
     
-            if json_obj.get('results'):
-                mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results']))
-                genLog(mgenlog)
-                print(mgenlog)
-                for trailer in json_obj['results']:
-                    item = getTrailerDetails(trailer['id'])
-                    if item != None:
-                        #print(item)
-                        found = checkTrailer(item, type)             # Check if movie already in database
-                        if found == 0:
-                            trresults = getTrailer(item['uri'])      # Fetch trailer
-                            if trresults[0] == 0:                    # New trailer fetched
-                                trname = checkFormats(trresults[1])  # Check if encoding needs changed
-                                if trname != 0:                      # Trailer file reencoded                              
-                                    moveTrailers(trname)             # Move trailer to trailer folder
-                                    updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
-                                    getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
-                            #print(str(trresults))
-                            totcount += 1
-                        else:
-                            dupcount += 1
+                if json_obj.get('results'):
+                    mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results'])) + ' Page: ' + str(page)
+                    genLog(mgenlog)
+                    print(mgenlog)
+                    for trailer in json_obj['results']:
+                        item = getTrailerDetails(trailer['id'])
+                        if item != None:
+                            #print(item)
+                            found = checkTrailer(item, type)             # Check if movie already in database
+                            if found == 0:
+                                trresults = getTrailer(item['uri'])      # Fetch trailer
+                                if trresults[0] == 0:                    # New trailer fetched
+                                    trname = checkFormats(trresults[1])  # Check if encoding needs changed
+                                    if trname != 0:                      # Trailer file reencoded                              
+                                        moveTrailers(trname)             # Move trailer to trailer folder
+                                        updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
+                                        getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
+                                #print(str(trresults))
+                                totcount += 1
+                                ccount += 1
+                            else:
+                                dupcount += 1
 
 
     except Exception as e:
@@ -264,7 +292,9 @@ def getTrailerDetails(id):
                  'content_rating': '',
                  'artist_actor': '',
                  'album_series': '',
-                 'composer_director_creator': ''
+                 'composer_director_creator': '',
+                 'writer': '',
+                 'producer': ''
                }
         
         # make sure it has a trailer video
@@ -325,23 +355,34 @@ def getTrailerDetails(id):
                                 for actor in cast:
                                     item['artist_actor'] = item['artist_actor'] + actor['name'] + '##'
                                     acount += 1
-                                    if acount > 9:
-                                        item['artist_actor'] = item['artist_actor'][:len(item['artist_actor']) - 2]
+                                    if acount > 10:
+                                        item['artist_actor'] = item['artist_actor'].rstrip('##')
+                                        #print(item['artist_actor'])
                                         break
-                                item['artist_actor'] = item['artist_actor'][:len(item['artist_actor']) - 2]
+                                item['artist_actor'] = item['artist_actor'].rstrip('##')
+                                #print(item['artist_actor'])
                             if casts.get('crew'):
                                 crew = casts['crew']
                                 #print(crew)
                                 for member in crew:
                                     if member['job'] == 'Director':
-                                        #item['composer_director_creator'].append(member['name'])
                                         item['composer_director_creator'] = item['composer_director_creator'] +   \
                                         member['name'] + '##'
-                                        item['composer_director_creator'] = item['composer_director_creator']\
-                                        [:len(item['composer_director_creator']) - 2]
-                                        break
-                                item['composer_director_creator'] = item['composer_director_creator']\
-                                [:len(item['composer_director_creator']) - 2]
+                                    if member['job'] == 'Producer' or member['job'] == 'Executive Producer':
+                                        item['producer'] = item['producer'] +   \
+                                        member['name'] + '##'
+                                    if member['job'] == 'Writer' or member['job'] == 'Screenplay':
+                                        item['writer'] = item['writer'] + member['name'] + '##'
+
+                                # Remover trailing ##s from strings
+                                item['composer_director_creator'] = item['composer_director_creator'].rstrip('##')
+                                item['producer'] = item['producer'].rstrip('##')
+                                item['writer'] = item['writer'].rstrip('##')        
+
+                                #print('Directors: ' + item['composer_director_creator'])
+                                #print('Producers: ' + item['producer'])
+                                #print('Writers: ' + item['writer'])
+
                         return item
         return None
 
@@ -363,23 +404,35 @@ def checkTrailer(item, mtype):                             # Check if trailer / 
         del trcurr
 
         if trtuple:
-            mgenlog = 'Movie already in database, skipping: ' + item['title']
-            genLog(mgenlog)
-            print(mgenlog)
+            try:
+                mgenlog = 'Movie already in database, skipping: ' + item['title']
+                genLog(mgenlog)
+                print(mgenlog)
+            except:
+                mgenlog = 'Movie already in database, skipping TMDB ID - ' + str(item['tmdb_id'])
+                genLog(mgenlog)
+                print(mgenlog)
             found = 1
         else:
-            mgenlog = 'New movie found: ' + str(item['title'])
-            genLog(mgenlog)
-            print(mgenlog)
+            try:                                            # Handle unprintable characters
+                mgenlog = 'New movie found: ' + item['title']
+                genLog(mgenlog)
+                print(mgenlog)
+            except:
+                mgenlog = 'New movie found: ' + 'TMDB ID - ' + str(item['tmdb_id'])
+                genLog(mgenlog)
+                print(mgenlog)
+
             currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,      \
             trTagline, trRelease_date, trImdb_id, trWebsite, trPoster_path, trBackdrop_path, trUser_rating,  \
-            trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1 ) values            \
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime, item['tmdb_id'],          \
-            item['uri'], mtype, item['title'],  item['description'], item['tagline'], item['release_date'],  \
-            item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'], item['user_rating'], \
-            str(item['genre']), str(item['production_company']), item['content_rating'],                     \
-            str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'], ))
+            trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1, trProducer,        \
+            trWriter ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime,   \
+            item['tmdb_id'], item['uri'], mtype, item['title'],  item['description'], item['tagline'],       \
+            item['release_date'], item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'],\
+            item['user_rating'], str(item['genre']), str(item['production_company']), item['content_rating'],\
+            str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'],         \
+            item['producer'], item['writer'],))
             db.commit()    
             found = 0
         db.close()
@@ -387,7 +440,7 @@ def checkTrailer(item, mtype):                             # Check if trailer / 
 
     except Exception as e:
         print (e)
-        mgenlog = 'There was an error checking trailer details for: ' + str(item['itle'])
+        mgenlog = 'There was an error checking trailer details for: TMDB ID - ' + str(item['tmdb_id'])
         print(mgenlog)
         genLog(mgenlog)
         return found 
@@ -442,6 +495,17 @@ def checkDatabase():
         trBackdrop_path TEXT, locBackdrop_path TEXT, trUser_rating INTEGER, trGenres TEXT, trProd_company TEXT,\
         trContent_rating TEXT, trArtist_actor TEXT, trComposer TEXT, lastchecked TEXT, tr_resol INTEGER,       \
         tr_size INTEGER, var1 TEXT, var2 TEXT, var3 TEXT, var4 TEXT)')
+
+        try:
+            db.execute('ALTER TABLE mTrailers ADD COLUMN trProducer TEXT')
+            db.execute('ALTER TABLE mTrailers ADD COLUMN trWriter TEXT')
+            db.execute('ALTER TABLE mTemp ADD COLUMN trProducer TEXT')
+            db.execute('ALTER TABLE mTemp ADD COLUMN trWriter TEXT')
+            db.execute('ALTER TABLE mHistory ADD COLUMN trProducer TEXT')
+            db.execute('ALTER TABLE mHistory ADD COLUMN trWriter TEXT')
+            genLog('Updated database to version 2.0.1+ table format')
+        except:
+            genLog('Version 2.0.1+ table format confirmed')
 
         db.execute('CREATE INDEX IF NOT EXISTS tetrailer_1 ON mTemp (dateAdded)')
         db.execute('CREATE UNIQUE INDEX IF NOT EXISTS tetrailer_2 ON mTemp (trailerUri)')

@@ -25,3 +25,13 @@ v2.0.0  11/17/2023
 - Added \ movies to paths for future TMDB TV series channel and more - client and server
 - Fixed trailers table CSV export not working
 - Replaced CSV ## delimiter with standard ", " for genres, directors etc.. 
+
+v2.0.1  11/22/2023
+- Additional code cleanup - client and server
+- Fixed issue where the last 2 characters were being chopped off for the last actor, genre and director
+- Bug fix for no trailers being displayed when logging is enabled due to path change for v2.0.0 
+- Added producers and writers to trailer information - client and server
+- Added check for movie titles which have unprintable / stdout characters in Python
+- Added video as default value for category if improper setting value entered - server
+- Added setting to fetch up to 40 trailers per category per run vs. 20 previously - client
+

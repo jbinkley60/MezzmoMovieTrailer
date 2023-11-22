@@ -22,15 +22,6 @@ import urllib2
 import pickle
 from time import gmtime, strftime
 
-# movie trailer feed URLs
-MOVIETRAILERS_URL_CONFIG    = 'http://api.themoviedb.org/3/configuration?api_key=dee64c83bd0310bc227948c9d4bc5aab'
-MOVIETRAILERS_URL_LIST      = 'http://api.themoviedb.org/3/movie/{}?api_key=dee64c83bd0310bc227948c9d4bc5aab'
-MOVIETRAILERS_URL_DETAILS   = 'http://api.themoviedb.org/3/movie/{}?api_key=dee64c83bd0310bc227948c9d4bc5aab&append_to_response=videos,releases,casts'
-MOVIETRAILERS_URL_YOUTUBE   = 'https://www.youtube.com/watch?v={}'
-MOVIETRAILERS_URL_BASE      = ''
-MOVIETRAILERS_POSTER_SIZE   = 'w500'
-MOVIETRAILERS_BACKDROP_SIZE = 'original'
-
 
 # global dictionary of user preferences for this plugin (see def get_prefs() & def mezzmo_set_settings()
 MovieTrailerSettings = {}
@@ -38,25 +29,11 @@ MovieTrailerSettings = {}
 ########################################################################################################################
 def getTrailerDetails(db, tmdb_id):
 
-    global MOVIETRAILERS_URL_BASE
-
-    if MOVIETRAILERS_URL_BASE == '':
-        # retrieve JSON content about themoviedb.org configuration so we can get its base URL
-        file = urllib2.urlopen(MOVIETRAILERS_URL_CONFIG)
-        json_obj = json.load(file)
-        file.close()
-        if json_obj.get('images'):
-            MOVIETRAILERS_URL_BASE = json_obj['images']['base_url']
-
-    if MOVIETRAILERS_URL_BASE == '':
-        # error - could not get base url
-        return None
 
     trcurr = db.execute('select tmdb_id, mezzmoTrURL, trType, trTitle, trOverview, trTagline, trRelease_date, trImdb_id, trWebsite, \
-    trPoster_path, trBackdrop_path, trUser_rating, trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1     \
-    from mTrailers where tmdb_id = ?', (tmdb_id,))
+    trPoster_path, trBackdrop_path, trUser_rating, trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1,    \
+    trProducer, trWriter from mTrailers where tmdb_id = ?', (tmdb_id,))
     trtuple = trcurr.fetchone()
-    #genLog(str(trtuple))
     
     if trtuple:
         # has a trailer video, so create new MezzmoItem object & fill in details
@@ -75,6 +52,8 @@ def getTrailerDetails(db, tmdb_id):
         item.type = "video"
         if MovieTrailerSettings['trcategory'].lower() in ['video', 'movie', 'trailer']:
             item.category = MovieTrailerSettings['trcategory']
+        else:
+            item.category = 'video'
         item.themoviedb_id = trtuple[0]
         item.uri = trtuple[1]
         item.description = trtuple[4]
@@ -119,6 +98,21 @@ def getTrailerDetails(db, tmdb_id):
             for c in composer_director_creator_text:
                 composer_director_creators.append(c) 
             item.composer_director_creator = composer_director_creators
+        if trtuple[18]:
+            producer_text = ''
+            producer_text = trtuple[18].split('##')
+            producers = []
+            for p in producer_text:
+                producers.append(p) 
+            item.producer = producers
+        if trtuple[19]:
+            writer_text = ''
+            writer_text = trtuple[19].split('##')
+            writers = []
+            for w in writer_text:
+                writers.append(w) 
+            item.writer = writers                
+
         return item
     return None
 
@@ -128,9 +122,6 @@ def trailerDirectoryCallback(type):
 
     # function to get list of trailers for a given type
     content = []
-    
-    # themoviedb.org has server-side rate limiting (max. 40 requests in a 10 second span), so wait a little to try to keep within this limit
-    #time.sleep(0.15)
 
     db = openTrailerDB()     
 
@@ -170,7 +161,13 @@ def openTrailerDB():
     except:
         from pysqlite2 import dbapi2 as sqlite
                       
-    db = sqlite.connect(trailerdb)
+    try:                     
+        db = sqlite.connect(trailerdb)
+        if 'n' not in MovieTrailerSettings['detlogging'].lower():
+            genLog('SQLite Connection successful')
+    except:
+        if 'n' not in MovieTrailerSettings['detlogging'].lower():
+            genLog('SQLite Connection unsuccessful')
 
     return db
 
@@ -245,7 +242,7 @@ def mezzmo_get_plugins(language):
     plugin = MezzmoPluginContentProvider()
     plugin.id = "mezzmo.plugin.MovieTrailers2"
     plugin.title = "Movie Trailers 2"
-    plugin.version = "2.0.0"
+    plugin.version = "2.0.1"
     plugin.author = "Conceiva Pty. Ltd., jbinkley60"
     plugin.web_link = "https://www.themoviedb.org/"
     plugin.description = 'View movie trailers for current and upcoming movie releases.\n\nTrailer information provided by www.themoviedb.org.'
@@ -326,7 +323,7 @@ def mezzmo_set_logging(status, logging_path):
 ########################################################################################################################
 def genLog(mgenlog):                                        #  Write to logfile
 
-        logoutfile = MovieTrailerSettings['mezchannelpath'].rstrip('\\') + '\\trailers\\logfile.txt'
+        logoutfile = MovieTrailerSettings['mezchannelpath'].rstrip('\\') + '\\movies\\trailers\\logfile.txt'
 
         fileh = open(logoutfile, "a")                       #  open logf file
         currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
