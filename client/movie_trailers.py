@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 trailerdb = ''
 tr_config = {}
-totcount = dupcount = 0
+totcount = dupcount = notrailer = 0
 
 # movie trailer feed URLs
 MOVIETRAILERS_URL_LIST  = 'http://api.themoviedb.org/3/movie/{}?{}&api_key=dee64c83bd0310bc227948c9d4bc5aab'
@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 2.0.1'
+version = 'version 2.0.2'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -73,8 +73,8 @@ def getConfig():
         data = fileh.readline()                                        # Get number of trailers to keep
         datac = data.split('#')                                        # Remove comments
         tkeepcount = datac[0].strip().rstrip("\n")                     # cleanup unwanted characters
-        if int(tkeepcount) > 50:
-            tkeepcount = 50                                            # Max trailers per type is 50
+        if int(tkeepcount) > 100:
+            tkeepcount = 50                                            # Max trailers per type is 100
 
         data = fileh.readline()                                        # Get trailer max resolution
         datae = data.split('#')                                        # Remove comments
@@ -174,7 +174,7 @@ def displayHelp(sysarg1):                                 #  Command line help m
 def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie Channel Trailers  
     
     global tr_config
-    global dupcount, totcount 
+    global dupcount, totcount, notrailer 
     mtype = []                                                # list of trailers for a given type
 
     try:
@@ -197,12 +197,17 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
 
         
         fetchcount = int(tr_config['fetchcount'])
-        if fetchcount <= 20:
+        if fetchcount > 0 and fetchcount <= 20:
             pages = ['1']
-        elif fetchcount <= 40:
-            pages = ['2', '1']
+        elif fetchcount <= 40: 
+            pages = ['1', '2']
+        elif fetchcount <= 60: 
+            pages = ['1', '2', '3']
+        elif fetchcount <= 80: 
+            pages = ['1', '2', '3', '4']
         else:
             pages = ['1']
+
 
         if len(sysarg3) > 0 and sysarg3.isdigit():            # Allow for more trailers by page
             pages = [str(sysarg3)]
@@ -223,28 +228,32 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
                 jresponse.close()
     
                 if json_obj.get('results'):
-                    mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results'])) + ' Page: ' + str(page)
+                    mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results'])) \
+                    + ' Page: ' + str(page)
                     genLog(mgenlog)
                     print(mgenlog)
                     for trailer in json_obj['results']:
-                        item = getTrailerDetails(trailer['id'])
+                        cdupe = checkDupe(trailer['id'], trailer['title'], type)  # Check if TV Show already in database
+                        if cdupe == 0:
+                            item = getTrailerDetails(trailer['id'])
+                        else:
+                            dupcount += 1
+                            item = None
                         if item != None:
                             #print(item)
-                            found = checkTrailer(item, type)             # Check if movie already in database
-                            if found == 0:
-                                trresults = getTrailer(item['uri'])      # Fetch trailer
-                                if trresults[0] == 0:                    # New trailer fetched
-                                    trname = checkFormats(trresults[1])  # Check if encoding needs changed
-                                    if trname != 0:                      # Trailer file reencoded                              
-                                        moveTrailers(trname)             # Move trailer to trailer folder
-                                        updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
-                                        getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
-                                #print(str(trresults))
-                                totcount += 1
-                                ccount += 1
-                            else:
-                                dupcount += 1
-
+                            checkTrailer(item, type)                 # Check if movie already in database
+                            trresults = getTrailer(item['uri'])      # Fetch trailer
+                            if trresults[0] == 0:                    # New trailer fetched
+                                trname = checkFormats(trresults[1])  # Check if encoding needs changed
+                                if trname != 0:                      # Trailer file reencoded                              
+                                    moveTrailers(trname)             # Move trailer to trailer folder
+                                    updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
+                                    getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
+                            #print(str(trresults))
+                            totcount += 1
+                            ccount += 1
+                        else:
+                            notrailer += 1
 
     except Exception as e:
         print (e)
@@ -390,53 +399,60 @@ def getTrailerDetails(id):
         print (e)
         mgenlog = 'There was an error getting Movie Trailer Details for: ' + str(id)
         print(mgenlog)
-        genLog(mgenlog)  
+        genLog(mgenlog)
 
 
-def checkTrailer(item, mtype):                             # Check if trailer / movie already in database
+def checkDupe(tmdb_id, tname, mtype):                      # Check if trailer / movie already in database
 
-    try:
         db = openTrailerDB()
-        found = -1
+        found = 0
 
-        trcurr = db.execute('SELECT trTitle from mTrailers WHERE tmdb_id = ?', (item['tmdb_id'],)) 
+        trcurr = db.execute('SELECT trTitle from mTrailers WHERE tmdb_id = ?', (tmdb_id,)) 
         trtuple = trcurr.fetchone()
         del trcurr
 
         if trtuple:
             try:
-                mgenlog = 'Movie already in database, skipping: ' + item['title']
+                mgenlog = 'Movie already in database, skipping: ' + trtuple[0]
                 genLog(mgenlog)
                 print(mgenlog)
             except:
-                mgenlog = 'Movie already in database, skipping TMDB ID - ' + str(item['tmdb_id'])
+                mgenlog = 'Movie already in database, skipping: TMDB ID - ' + str(tmdb_id)
                 genLog(mgenlog)
                 print(mgenlog)
             found = 1
         else:
             try:                                            # Handle unprintable characters
-                mgenlog = 'New movie found: ' + item['title']
+                mgenlog = 'New Movie found: ' + tname
                 genLog(mgenlog)
                 print(mgenlog)
             except:
-                mgenlog = 'New movie found: ' + 'TMDB ID - ' + str(item['tmdb_id'])
+                mgenlog = 'New Movie - ' + 'TMDB ID - ' + str(tmdb_id)
                 genLog(mgenlog)
                 print(mgenlog)
 
-            currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,      \
-            trTagline, trRelease_date, trImdb_id, trWebsite, trPoster_path, trBackdrop_path, trUser_rating,  \
-            trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1, trProducer,        \
-            trWriter ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime,   \
-            item['tmdb_id'], item['uri'], mtype, item['title'],  item['description'], item['tagline'],       \
-            item['release_date'], item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'],\
-            item['user_rating'], str(item['genre']), str(item['production_company']), item['content_rating'],\
-            str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'],         \
-            item['producer'], item['writer'],))
-            db.commit()    
-            found = 0
         db.close()
-        return found
+        return found  
+
+
+def checkTrailer(item, mtype):                        # Update detailed trailer information already in database
+
+    try:
+        db = openTrailerDB()
+
+        currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,      \
+        trTagline, trRelease_date, trImdb_id, trWebsite, trPoster_path, trBackdrop_path, trUser_rating,  \
+        trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1, trProducer,        \
+        trWriter ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime,   \
+        item['tmdb_id'], item['uri'], mtype, item['title'],  item['description'], item['tagline'],       \
+        item['release_date'], item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'],\
+        item['user_rating'], str(item['genre']), str(item['production_company']), item['content_rating'],\
+        str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'],         \
+        item['producer'], item['writer'],))
+        db.commit()    
+        db.close()
+
 
     except Exception as e:
         print (e)
@@ -844,27 +860,35 @@ def checkLimits():                                     # Check category limits
         mtype = ['now_playing', 'upcoming', 'popular', 'top_rated']
 
         for type in mtype:
-            dbcurr = db.execute('SELECT dateAdded, tmdb_id, localTrURL, trTitle FROM mTrailers WHERE  \
-            dateAdded NOT IN (SELECT dateAdded FROM mTrailers WHERE trType = ? ORDER BY dateAdded     \
-            DESC LIMIT ? ) and trType = ?', (type, mcount, type,))
+            dbcurr = db.execute('SELECT dateAdded, tmdb_id, localTrURL, trTitle, locPoster_path,    \
+            locBackdrop_path FROM mTrailers WHERE  dateAdded NOT IN (SELECT dateAdded FROM          \
+            mTrailers WHERE trType = ? ORDER BY dateAdded DESC LIMIT ? ) and trType = ?', (type,    \
+            mcount, type,))
 
             dbtuple = dbcurr.fetchall()                   # movies over keep limit
-
+            del dbcurr
+            #print(str(dbtuple))
             if len(dbtuple) > 0:                          # Remove extra movies and trailer files
-                mcount = 0
+                rmcount = 0
                 for movie in range(len(dbtuple)):
                     delcommand = "del " + '"' + dbtuple[movie][2] + '"'       
-                    #print(delcommand)
+                    print(delcommand)
                     os.system(delcommand)                 # Remove trailer from disk
+                    if dbtuple[movie][4]:                     # Delete poster file
+                        command = "del " + dbtuple[movie][4] + " >nul 2>nul"
+                        os.system(command) 
+                    if dbtuple[movie][5]:                 # Delete backdrop file
+                        command = "del " + dbtuple[movie][5] + " >nul 2>nul"
+                        os.system(command)   
                     db.execute('DELETE FROM mTrailers WHERE tmdb_id=?', (dbtuple[movie][1],))
                     mgenlog = type + ' movie removed: ' + dbtuple[movie][3]
                     genLog(mgenlog)
-                    mcount += 1
+                    rmcount += 1
                 db.commit()
-                mgenlog = type + ' movie trailers removed: ' + str(mcount)
+                mgenlog = type + ' movie trailers removed: ' + str(rmcount)
                 genLog(mgenlog)
                 print(mgenlog)
-
+            del dbtuple
         db.close()
         mgenlog = 'Checking movie keep limits completed. '  
         genLog(mgenlog)
@@ -1231,7 +1255,7 @@ def displayStats(sysarg1):                            # Display statistics
         if sysarg1.lower() not in ['trailers', 'stats']:
             return
   
-        global totcount, dupcount
+        global totcount, dupcount, notrailer
         global tr_config
         trailerloc = tr_config['ltrailerloc'] + '\\trailers'
         mtrailerloc = tr_config['mtrailerloc']
@@ -1241,8 +1265,9 @@ def displayStats(sysarg1):                            # Display statistics
         daytotal, grandtotal =  getTotals()
 
         if sysarg1.lower() in ['trailers']:
-            print ("Mezzmo movie trailers checked: \t\t\t" + str(totcount + dupcount))
-            print ("Mezzmo movie trailers skipped: \t\t\t" + str(dupcount))
+            print ("Mezzmo movie trailers checked: \t\t\t" + str(totcount + dupcount + (notrailer - dupcount)))
+            print ("Mezzmo movie trailers existing skipped: \t" + str(dupcount))
+            print ("Mezzmo movie trailers unavailable: \t\t" + str(notrailer - dupcount))
             print ("Mezzmo movie trailers fetched: \t\t\t" + str(totcount))
 
         if sysarg1.lower() in ['trailers', 'stats']:

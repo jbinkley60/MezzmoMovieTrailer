@@ -1,3 +1,9 @@
+Upgrading from v2.0.1 to v2.0.2
+
+v2.0.2 only has client changes.  Simply copy movie_trailers.py file over the 
+exsiting v2.0.1 file on your client computer.  
+
+
 Upgrading from v2.0.0 to v2.0.1
 
 Because the Mezzmo Movie Trailers Channel has a client and a server compoonent

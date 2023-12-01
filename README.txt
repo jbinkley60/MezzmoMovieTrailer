@@ -1,17 +1,21 @@
-v0.0.1  11/9/2023
+v2.0.2  12/1/2023
+- Improved speed and significant reduction in TMDB API calls by
+  changing the method / order for determining existing trailers 
+  in the database
+- Fixed a bug which was causing some trailers to be incorrectly 
+  deleted when checking the trailer limits and then rediscovered
+- Improved statistics shown at the end of a trailer check run
+- Increased configuration option for trailers to keep from 50 to 100 per category
+- Fixed bug where trailer artwork files were not being deleted during limit check trailer removals
 
-- Initial client test release
-
-v0.0.2  11/11/2023
-- Added trailer clean feature
-- Continued code cleanup and bug fixes
-
-v0.0.3  11/12/2023
-- Added all option to trailers for fetching all categories in a single command
-- Enabled movie trailer keep limits from config file setting
-- Added stats option to display trailer statistics
-- Added support for Mezzmo Kodi addon integration
-- Removed 5 trailer download limit for each category
+v2.0.1  11/22/2023
+- Additional code cleanup - client and server
+- Fixed issue where the last 2 characters were being chopped off for the last actor, genre and director
+- Bug fix for no trailers being displayed when logging is enabled due to path change for v2.0.0 
+- Added producers and writers to trailer information - client and server
+- Added check for movie titles which have unprintable / stdout characters in Python
+- Added video as default value for category if improper setting value entered - server
+- Added setting to fetch up to 40 trailers per category per run vs. 20 previously - client
 
 v2.0.0  11/17/2023
 - Initial production release
@@ -26,12 +30,17 @@ v2.0.0  11/17/2023
 - Fixed trailers table CSV export not working
 - Replaced CSV ## delimiter with standard ", " for genres, directors etc.. 
 
-v2.0.1  11/22/2023
-- Additional code cleanup - client and server
-- Fixed issue where the last 2 characters were being chopped off for the last actor, genre and director
-- Bug fix for no trailers being displayed when logging is enabled due to path change for v2.0.0 
-- Added producers and writers to trailer information - client and server
-- Added check for movie titles which have unprintable / stdout characters in Python
-- Added video as default value for category if improper setting value entered - server
-- Added setting to fetch up to 40 trailers per category per run vs. 20 previously - client
+v0.0.3  11/12/2023
+- Added all option to trailers for fetching all categories in a single command
+- Enabled movie trailer keep limits from config file setting
+- Added stats option to display trailer statistics
+- Added support for Mezzmo Kodi addon integration
+- Removed 5 trailer download limit for each category
 
+v0.0.2  11/11/2023
+- Added trailer clean feature
+- Continued code cleanup and bug fixes
+
+v0.0.1  11/9/2023
+
+- Initial client test release
