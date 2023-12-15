@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 2.0.2'
+version = 'version 2.0.3'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -240,7 +240,6 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
                             dupcount += 1
                             item = None
                         if item != None:
-                            #print(item)
                             checkTrailer(item, type)                 # Check if movie already in database
                             trresults = getTrailer(item['uri'])      # Fetch trailer
                             if trresults[0] == 0:                    # New trailer fetched
@@ -249,15 +248,20 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
                                     moveTrailers(trname)             # Move trailer to trailer folder
                                     updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
                                     getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
-                            #print(str(trresults))
-                            totcount += 1
+                                totcount += 1
+                            else:
+                                notrailer += 1                       # Trailer unavailable
                             ccount += 1
                         else:
                             notrailer += 1
+                        if cdupe == 0:                               # Not dupe but no trailer
+                            mgenlog = 'No movie trailer videos found for TMDB_ID: ' + str(trailer['id'])
+                            print(mgenlog)
+                            genLog(mgenlog)
 
     except Exception as e:
         print (e)
-        mgenlog = 'There was an error getting Movie Trailer Channel listing for: ' + type
+        mgenlog = 'There was an error getting Movie Trailer Channel listing for ' + type
         print(mgenlog)
         genLog(mgenlog)           
 
@@ -529,6 +533,15 @@ def checkDatabase():
         db.execute('CREATE INDEX IF NOT EXISTS tetrailer_4 ON mTemp (trType)')
         db.execute('CREATE INDEX IF NOT EXISTS tetrailer_5 ON mTemp (tmdb_id)')
         db.execute('DELETE FROM mTemp')                                    # Clear temp table on startup
+
+        hscurr = db.execute('SELECT dateAdded, tmdb_id FROM mHistory ORDER BY DateAdded ASC')
+        hstuples = hscurr.fetchall()
+        hstcount = len(hstuples)        
+        #print(hstcount)
+        if hstcount > 0 and hstcount > 1000:                                # Trim history table to 1000 rows
+            for row in range(len(hstuples) - 1000):
+                db.execute('DELETE from mHistory WHERE dateAdded = ? AND tmdb_id = ?',     \
+                (hstuples[row][0], hstuples[row][1],)) 
 
         db.commit()
         db.close()
@@ -1023,7 +1036,8 @@ def getTotals():                                             # Gets checked down
         dateMatch = currDate + '%'
         dqcurr = db.execute('SELECT count (*) from mHistory WHERE dateAdded LIKE ?', (dateMatch,))
         daytuple = dqcurr.fetchone()
-        dqcurr = db.execute('SELECT count (*) from mHistory')
+        newtime = (datetime.now() + timedelta(days=-30)).strftime('%Y-%m-%d %H:%M:%S')
+        dqcurr = db.execute('SELECT count (*) from mHistory WHERE dateAdded > ?', (newtime,))
         htottuple = dqcurr.fetchone()
         db.close()
         return [daytuple[0], htottuple[0]]
@@ -1150,6 +1164,22 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
                     print('\n' + mgenlog)  
 
 
+def checkLogfile():                                   # Checks / trims the size of the logfile
+
+        global tr_config
+        logoutfile = tr_config['logoutfile']
+        fileh = open(logoutfile, "r+")                #  open log file
+        flines = fileh.readlines()
+        fcount = len(flines)
+        if fcount > 16000:
+            fileh.seek(0)
+            fileh.truncate()
+            fileh.writelines(flines[fcount - 15000:])
+        fileh.close()
+        mgenlog = 'The number of lines in the logfile is: ' + str(len(flines))
+        genLog(mgenlog)  
+
+
 def checkFiles():                                     # Check for orphaned trailer or missing files
 
 
@@ -1268,7 +1298,7 @@ def displayStats(sysarg1):                            # Display statistics
             print ("Mezzmo movie trailers checked: \t\t\t" + str(totcount + dupcount + (notrailer - dupcount)))
             print ("Mezzmo movie trailers existing skipped: \t" + str(dupcount))
             print ("Mezzmo movie trailers unavailable: \t\t" + str(notrailer - dupcount))
-            print ("Mezzmo movie trailers fetched: \t\t\t" + str(totcount))
+            print ("Mezzmo movie trailers fetched last 30 days: \t" + str(totcount))
 
         if sysarg1.lower() in ['trailers', 'stats']:
             print ("\nMezzmo movie trailers fetched today: \t\t" + str(daytotal))
@@ -1321,6 +1351,7 @@ checkCommands(sysarg1, sysarg2)                              # Check for valid c
 getConfig()                                                  # Process config file
 checkFolders()                                               # Check trailer and temp folder locations
 checkDatabase()                                              # Check trailer database
+checkLogfile()                                               # Checks the size of the logfile
 checkLimits()                                                # Check limits of trailers to keep 
 getMezzmoTrailers(sysarg1, sysarg2, sysarg3)                 # Get Movie Channel Trailers
 checkCsv(sysarg1, sysarg2)
