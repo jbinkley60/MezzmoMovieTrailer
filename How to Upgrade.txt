@@ -1,3 +1,8 @@
+Upgrading from v2.0.3 to v2.0.4
+
+v2.0.4 only has client changes.  Simply copy movie_trailers.py and yt-dlp.exe files
+over the exsiting v2.0.3 files on your client computer.  
+
 Upgrading from v2.0.2 to v2.0.3
 
 v2.0.3 only has client changes.  Simply copy movie_trailers.py file over the 

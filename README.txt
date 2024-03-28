@@ -1,3 +1,9 @@
+v2.0.4  3/28/2024
+
+- Fixed API key issue causing 401 errors from TMDB
+- Updated yt-dlp.exe to a new version to fix other You Tube errors
+- Updated format parsing to handle newer You Tube formats
+
 v2.0.3  12/14/2023
 
 - Added feature to trim database history table to 1000 lines and the
