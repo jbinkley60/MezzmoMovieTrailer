@@ -9,7 +9,7 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - Full movie metadata including plot, actors, artwork, movieset and more 
 - User selectable feature of 480P, 720P or 1080P quality trailers (if available, otherwise best quality available)
 - Automatically move trailers to designated location (i.e. NAS, local disk etc.)
-- Option for how many movies to keep for each category (1-50) with auto deletions
+- Option for how many movies to keep for each category (1-100) with auto deletions
 - Option to set output trailer output format to mp4 or mkv 
 - Full detailed logfile
 - Full Mezzmo Movie Trailers Channel statistics
