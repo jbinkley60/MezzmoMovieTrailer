@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 2.0.4'
+version = 'version 2.0.5'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -94,7 +94,16 @@ def getConfig():
             datav = data.split('#')                                    # Remove comments
             tformat = datav[0].strip().rstrip("\n").lower()            # cleanup unwanted characters
         else:
-            tformat = 'mp4'   
+            tformat = 'mp4'
+
+        data = fileh.readline()                                        # Get maximum number of trailers to fecth per run
+        if data != '':
+            datar = data.split('#')                                    # Remove comments
+            mfetch = datar[0].strip().rstrip("\n")                     # cleanup unwanted characters
+        else:
+            mfetch = '20'                                              # 20 trailers per fetch is the default
+        if int(mfetch) > 40:
+            mfetch = 40                                                # Max trailers per fetch is 40
         fileh.close()                                                  # close the file
         
         tr_config = {
@@ -105,6 +114,7 @@ def getConfig():
                      'maxres': maxres,
                      'logoutfile': logoutfile,
                      'tformat': tformat,
+                     'mfetch': mfetch,
                     }
 
         if not tformat in ['mkv', 'mp4']:
@@ -184,40 +194,48 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
         elif sysarg2.lower() == 'all':
             mtype = ['now_playing', 'upcoming', 'popular', 'top_rated']
 
-        if len(sysarg3) > 0 and sysarg3.isdigit():            # Allow for more trailers
-            page = int(sysarg3)
+        if len(sysarg3) > 0 and sysarg3.isdigit():            # Allow for specifc page fetch
+            pages = [str(sysarg3)]
         else:
-            page = 1
+            pages = getPages()                                # Get list of pages to fetch  
 
         for type in mtype:
-            jresponse = urllib.request.urlopen(MOVIETRAILERS_URL_LIST.format(type, 'page=' + str(page)))
-            json_obj = json.load(jresponse)
-            #print(str(json_obj))
-            jresponse.close()
+            ccount = 0                                        # Category match counter
+            for page in pages:
+                #print('Page number and counters are: ' + page + '  ' + str(ccount))            
+                if ccount >= int(tr_config['mfetch']):        # Stop when max fetch reached
+                    mgenlog = 'Movie category trailer limit reached: ' + type
+                    genLog(mgenlog)
+                    print(mgenlog)  
+                    break 
+                jresponse = urllib.request.urlopen(MOVIETRAILERS_URL_LIST.format(type, 'page=' + str(page)))
+                json_obj = json.load(jresponse)
+                #print(str(json_obj))
+                jresponse.close()
     
-            if json_obj.get('results'):
-                mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results']))
-                genLog(mgenlog)
-                print(mgenlog)
-                for trailer in json_obj['results']:
-                    item = getTrailerDetails(trailer['id'])
-                    if item != None:
-                        #print(item)
-                        found = checkTrailer(item, type)             # Check if movie already in database
-                        if found == 0:
-                            trresults = getTrailer(item['uri'])      # Fetch trailer
-                            if trresults[0] == 0:                    # New trailer fetched
-                                trname = checkFormats(trresults[1])  # Check if encoding needs changed
-                                if trname != 0:                      # Trailer file reencoded                              
-                                    moveTrailers(trname)             # Move trailer to trailer folder
-                                    updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
-                                    getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
-                            #print(str(trresults))
-                            totcount += 1
-                        else:
-                            dupcount += 1
+                if json_obj.get('results'):
+                    mgenlog = 'Number of movies ' + type + ' found: ' + str(len(json_obj['results']))
+                    genLog(mgenlog)
+                    print(mgenlog)
 
-
+                    for trailer in json_obj['results']:
+                        item = getTrailerDetails(trailer['id'])
+                        if item != None:
+                            #print(item)
+                            found = checkTrailer(item, type)             # Check if movie already in database
+                            if found == 0:
+                                trresults = getTrailer(item['uri'])      # Fetch trailer
+                                if trresults[0] == 0:                    # New trailer fetched
+                                    trname = checkFormats(trresults[1])  # Check if encoding needs changed
+                                    if trname != 0:                      # Trailer file reencoded                              
+                                        moveTrailers(trname)             # Move trailer to trailer folder
+                                        updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
+                                        getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
+                                #print(str(trresults))
+                                totcount += 1
+                                ccount += 1
+                            else:
+                                dupcount += 1
     except Exception as e:
         print (e)
         mgenlog = 'There was an error getting Movie Trailer Channel listing for: ' + type
@@ -487,6 +505,33 @@ def updateTempHist(tmdb_id, trname, trsize, trres):                       # Upda
         mgenlog = "There was a problem updating the temp table: " + trailerdb
         print(mgenlog)
         genLog(mgenlog)  
+
+
+def getPages():                                     # Return page list based upon config setting
+
+    global tr_config    
+    mcount = int(tr_config['mcount'])                                  # Number of Movie Trailers to keep
+
+    if mcount > 0 and mcount <= 20:
+        pages = ['1', '2']
+    elif mcount <= 30: 
+        pages = ['1', '2', '3']
+    elif mcount <= 40: 
+        pages = ['1', '2', '3']
+    elif mcount <= 50: 
+        pages = ['1', '2', '3', '4']
+    elif mcount <= 60: 
+        pages = ['1', '2', '3', '4']
+    elif mcount <= 70: 
+        pages = ['1', '2', '3', '4', '5']
+    elif mcount <= 80: 
+        pages = ['1', '2', '3', '4', '5']
+    elif mcount <= 90: 
+        pages = ['1', '2', '3', '4', '5', '6']
+    else: 
+        pages = ['1', '2', '3']
+
+    return pages
 
 
 def checkFormats(trailfile):                                             # Check / modify output formats
@@ -784,42 +829,52 @@ def checkLimits():                                     # Check category limits
 
         global tr_config
         trailerloc = tr_config['ltrailerloc']         # Get locatal path to trailer lcoation
-        mcount = tr_config['mcount']                  # Number of movie trailers to keep
+        mcount = int(tr_config['mcount'])             # Number of movie trailers to keep
 
-        if int(mcount) == 0:                          # Unlimited retention
+        if mcount == 0:                               # Unlimited retention
             mgenlog = 'Checking movie keep limits.  Unlimited selected.  Skipping.'
             genLog(mgenlog)    
             return
 
         db = openTrailerDB()
 
-        mgenlog = 'Checking movie keep limits'
+        mgenlog = 'Checking movie keep limits.'
         genLog(mgenlog)
         print('\n' + mgenlog)
 
         mtype = ['now_playing', 'upcoming', 'popular', 'top_rated']
 
         for type in mtype:
-            dbcurr = db.execute('SELECT dateAdded, tmdb_id, localTrURL, trTitle FROM mTrailers WHERE  \
-            dateAdded NOT IN (SELECT dateAdded FROM mTrailers WHERE trType = ? ORDER BY dateAdded     \
-            DESC LIMIT ? ) and trType = ?', (type, mcount, type,))
+            dbcurr = db.execute('SELECT dateAdded, tmdb_id, localTrURL, trTitle, locPoster_path,      \
+            locBackdrop_path FROM mTrailers WHERE tmdb_id NOT IN (SELECT tmdb_id FROM mTrailers       \
+            WHERE trType = ? ORDER BY dateAdded DESC LIMIT ? ) and trType = ?', (type, mcount, type,))
 
-            dbtuple = dbcurr.fetchall()                   # movies over keep limit
+            dbtuple = dbcurr.fetchall()              # movies over keep limit
+            del dbcurr
+            #print('Dbtuple length: ' + str(len(dbtuple)) + ' ' + type)
 
-            if len(dbtuple) > 0:                          # Remove extra movies and trailer files
-                mcount = 0
+            if len(dbtuple) > 0:                     # Remove extra movies and trailer files
+                rmcount = 0
                 for movie in range(len(dbtuple)):
-                    delcommand = "del " + '"' + dbtuple[movie][2] + '"'       
-                    #print(delcommand)
-                    os.system(delcommand)                 # Remove trailer from disk
-                    db.execute('DELETE FROM mTrailers WHERE tmdb_id=?', (dbtuple[movie][1],))
+                    if dbtuple[movie][2]:
+                        delcommand = "del " + '"' + dbtuple[movie][2] + '"'       
+                        #print(delcommand)
+                        os.system(delcommand)        # Remove trailer from disk
+                    if dbtuple[movie][4]:
+                        delcommand = "del " + dbtuple[movie][4] + " >nul 2>nul"
+                        os.system(delcommand)        # Delete poster file from disk
+                    if dbtuple[movie][5]:
+                        delcommand = "del " + dbtuple[movie][5] + " >nul 2>nul"
+                        os.system(delcommand)        # Delete backdrop file from disk
+                    db.execute('DELETE FROM mTrailers WHERE tmdb_id=? and trtype=?', (dbtuple[movie][1], type,))
                     mgenlog = type + ' movie removed: ' + dbtuple[movie][3]
                     genLog(mgenlog)
-                    mcount += 1
+                    rmcount += 1
                 db.commit()
-                mgenlog = type + ' movie trailers removed: ' + str(mcount)
+                mgenlog = type + ' movie trailers removed: ' + str(rmcount)
                 genLog(mgenlog)
                 print(mgenlog)
+            del dbtuple
 
         db.close()
         mgenlog = 'Checking movie keep limits completed. '  
@@ -1003,9 +1058,7 @@ def makeBackups():                                   # Make database backups
         print(mgenlog)      
 
                                   
-
 def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie trailers from DB
-
 
         if sysarg1.lower() not in ['clean']:
             return
@@ -1079,7 +1132,42 @@ def cleanTrailers(sysarg1 = '', sysarg2 = '', sysarg3 = ''): # Clean show movie 
                     db.close()
                     mgenlog = 'Number of movie trailers successfully cleaned: ' + str(delcount)
                     genLog(mgenlog)
-                    print('\n' + mgenlog)  
+                    print('\n' + mgenlog)
+
+
+def checkUpdate(sysarg1):                             # Check for yt-dlp.exe update
+
+    try:
+        if len(sysarg1) > 1 and sysarg1.lower() != 'trailers':
+            return        
+        command = "yt-dlp.exe -U >nul 2>nul"
+        #print(command)
+        os.system(command)
+        mgenlog = 'Checking for yt-dlp.exe update completed.'
+        genLog(mgenlog)
+        print(mgenlog)
+    except Exception as e:
+        print (e)
+        mgenlog = 'There was a problem checking for a yt-dlp.exe update.'
+        genLog(mgenlog)
+        print(mgenlog)
+        exit()  
+
+
+def checkLogfile():                                   # Checks / trims the size of the logfile
+
+        global tr_config
+        logoutfile = tr_config['logoutfile']
+        fileh = open(logoutfile, "r+")                #  open log file
+        flines = fileh.readlines()
+        fcount = len(flines)
+        if fcount > 16000:
+            fileh.seek(0)
+            fileh.truncate()
+            fileh.writelines(flines[fcount - 15000:])
+        fileh.close()
+        mgenlog = 'The number of lines in the logfile is: ' + str(len(flines))
+        genLog(mgenlog)  
 
 
 def checkFiles():                                     # Check for orphaned trailer or missing files
@@ -1250,8 +1338,10 @@ def displayStats(sysarg1):                            # Display statistics
 checkVersion()                                               # Ensure Python version 3+
 checkCommands(sysarg1, sysarg2)                              # Check for valid commands
 getConfig()                                                  # Process config file
+checkUpdate(sysarg1)                                         # Check for new vesion of yt-dlp.exe
 checkFolders()                                               # Check trailer and temp folder locations
 checkDatabase()                                              # Check trailer database
+checkLogfile()                                               # Checks the size of the logfile
 checkLimits()                                                # Check limits of trailers to keep 
 getMezzmoTrailers(sysarg1, sysarg2, sysarg3)                 # Get Movie Channel Trailers
 checkCsv(sysarg1, sysarg2)

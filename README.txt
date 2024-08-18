@@ -1,3 +1,16 @@
+v2.0.5 8/18/2024
+
+- Updated yt-dlp.exe to eliminate warning messages
+- Added automatic yt-dlp.exe update checking/updating to the latest version
+- Added automatic deletion of artwork, along with trailer files, when maximum
+  number of trailers to keep is reached.  Previously just the trailer files
+  were automatically deleted.
+- Added automatic logfile pruning to keep it from growing beyond 16,000 lines.
+- Fixd bug where trailers were being deleted when they were below the maximum
+  amount to keep per category
+- Added setting to limit the maximum number of new trailers per category to 
+  fetch per run
+
 v2.0.4  3/28/2024
 
 - Fixed API key issue causing 401 errors from TMDB

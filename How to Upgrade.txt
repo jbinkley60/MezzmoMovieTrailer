@@ -1,3 +1,12 @@
+Upgrading from v2.0.4 to v2.0.5
+
+v2.0.5 only has client changes.  Simply copy movie_trailers.py and yt-dlp.exe files
+over the exsiting v2.0.4 files on your client computer.  Going forward the yt-dlp.exe
+file will be checked for an update everytime the Movie Trailers 2 plugin is run.
+
+Also verify that the config file has a value for the new option: 
+Max trailers to fetch per category for each run
+
 Upgrading from v2.0.3 to v2.0.4
 
 v2.0.4 only has client changes.  Simply copy movie_trailers.py and yt-dlp.exe files
