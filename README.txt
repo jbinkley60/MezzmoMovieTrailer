@@ -6,7 +6,7 @@ v2.0.5 8/18/2024
   number of trailers to keep is reached.  Previously just the trailer files
   were automatically deleted.
 - Added automatic logfile pruning to keep it from growing beyond 16,000 lines.
-- Fixd bug where trailers were being deleted when they were below the maximum
+- Fixed bug where trailers were being deleted when they were below the maximum
   amount to keep per category
 - Added setting to limit the maximum number of new trailers per category to 
   fetch per run
