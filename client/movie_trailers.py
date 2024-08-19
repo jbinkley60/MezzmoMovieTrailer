@@ -73,8 +73,8 @@ def getConfig():
         data = fileh.readline()                                        # Get number of trailers to keep
         datac = data.split('#')                                        # Remove comments
         tkeepcount = datac[0].strip().rstrip("\n")                     # cleanup unwanted characters
-        if int(tkeepcount) > 50:
-            tkeepcount = 50                                            # Max trailers per type is 50
+        if int(tkeepcount) > 100:
+            tkeepcount = 100                                           # Max trailers per type is 100
 
         data = fileh.readline()                                        # Get trailer max resolution
         datae = data.split('#')                                        # Remove comments
@@ -123,7 +123,7 @@ def getConfig():
             genLog(mgenlog)
             print(mgenlog) 
 
-        configuration = [ltrailerloc, mtrailerloc, tkeepcount, maxres, logoutfile, tformat]
+        configuration = [ltrailerloc, mtrailerloc, tkeepcount, maxres, logoutfile, tformat, mfetch]
         mgenlog = ("Mezzmo Movie Trailers Channel Checker Client - " + version)
         print(mgenlog)
         genLog(mgenlog)
@@ -203,10 +203,7 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
             ccount = 0                                        # Category match counter
             for page in pages:
                 #print('Page number and counters are: ' + page + '  ' + str(ccount))            
-                if ccount >= int(tr_config['mfetch']):        # Stop when max fetch reached
-                    mgenlog = 'Movie category trailer limit reached: ' + type
-                    genLog(mgenlog)
-                    print(mgenlog)  
+                if ccount >= int(tr_config['mfetch']):        # Stop page checking when max fetch reached
                     break 
                 jresponse = urllib.request.urlopen(MOVIETRAILERS_URL_LIST.format(type, 'page=' + str(page)))
                 json_obj = json.load(jresponse)
@@ -219,6 +216,11 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
                     print(mgenlog)
 
                     for trailer in json_obj['results']:
+                        if ccount >= int(tr_config['mfetch']):        # Stop when max fetch reached
+                            mgenlog = 'Movie category trailer limit reached: ' + type
+                            genLog(mgenlog)
+                            print(mgenlog)  
+                            break 
                         item = getTrailerDetails(trailer['id'])
                         if item != None:
                             #print(item)
