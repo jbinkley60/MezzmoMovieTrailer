@@ -17,7 +17,8 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 - Local artwork for improved quality and performance
 - CSV export of trailer information and checker history 
 - Command line backups of Mezzmo Movie Trailers Channel database
-- User ability to clear trailer information by movie category 
+- User ability to clear trailer information by movie category
+- Client software now available in both native Python and Windows x64 formats 
 <br/>
 
 ## Installation and usage:

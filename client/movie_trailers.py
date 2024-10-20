@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 2.0.5'
+version = 'version 2.0.6'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -52,7 +52,7 @@ def checkVersion():
         print('\nThe Mezzmo Movie Trailer Channel requires Python version 3 or higher')
         print('Python version: ' + str(sys.version_info[0]) + '.' + str(sys.version_info[1])   \
         + '.' + str(sys.version_info[2]) + ' found.')
-        exit()  
+        sys.exit()  
 
 
 def getConfig():
@@ -143,10 +143,10 @@ def checkCommands(sysarg1, sysarg2):                                   # Check f
    
     if len(sysarg1) > 1 and sysarg1.lower() not in ['trailers', 'csv', 'help', 'backup', 'clean', 'stats']:
         displayHelp(sysarg1)
-        exit()
+        sys.exit()
     if len(sysarg1) == 0 or 'help' in sysarg1.lower():
         displayHelp(sysarg1)
-        exit()
+        sys.exit()
 
 
 def displayHelp(sysarg1):                                 #  Command line help menu display
@@ -233,9 +233,9 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
                                         moveTrailers(trname)             # Move trailer to trailer folder
                                         updateTempHist(item['tmdb_id'], trname, trresults[2], trresults[3])
                                         getArtwork(item['tmdb_id'], item['poster_uri'], item['backdrop_uri'])
+                                    ccount += 1                          # Increment new trailer counter
                                 #print(str(trresults))
                                 totcount += 1
-                                ccount += 1
                             else:
                                 dupcount += 1
     except Exception as e:
@@ -481,7 +481,7 @@ def checkDatabase():
         print (e)
         mgenlog = "There was a problem verifying the trailer database file: " + trailerdb
         print(mgenlog)
-        exit()   
+        sys.exit()   
 
 
 def updateTempHist(tmdb_id, trname, trsize, trres):                       # Update temp table

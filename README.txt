@@ -1,3 +1,9 @@
+v2.0.6 10/19/2024
+
+-  Fixed new fetch counter limit bug where limit could be reached incorrectly
+-  Updated client code to support Windows 64 exe format
+-  Added Windoww x64 release format for client along with native Python  
+
 v2.0.5 8/18/2024
 
 - Updated yt-dlp.exe to eliminate warning messages
