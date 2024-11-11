@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # #!/usr/bin/python
-import os, fnmatch, sys, csv, json, glob
+import os, fnmatch, sys, csv, json, glob, linecache
 from datetime import datetime, timedelta
 import time
 import urllib.request, urllib.parse, urllib.error
@@ -24,7 +24,7 @@ MOVIETRAILERS_URL_BASE      = ''
 MOVIETRAILERS_POSTER_SIZE   = 'w500'
 MOVIETRAILERS_BACKDROP_SIZE = 'original'
 
-version = 'version 2.0.6'
+version = 'version 2.0.7'
 
 sysarg1 = sysarg2 = sysarg3 = sysarg4 = ''
 
@@ -133,7 +133,7 @@ def getConfig():
         return 
  
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was a problem parsing the config file.'
         genLog(mgenlog)
         print(mgenlog)
@@ -239,7 +239,7 @@ def getMezzmoTrailers(sysarg1= '', sysarg2= '', sysarg3 = ''):    #  Get Movie C
                             else:
                                 dupcount += 1
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was an error getting Movie Trailer Channel listing for: ' + type
         print(mgenlog)
         genLog(mgenlog)           
@@ -366,7 +366,7 @@ def getTrailerDetails(id):
         return None
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was an error getting Movie Trailer Details for: ' + str(id)
         print(mgenlog)
         genLog(mgenlog)  
@@ -383,31 +383,41 @@ def checkTrailer(item, mtype):                             # Check if trailer / 
         del trcurr
 
         if trtuple:
-            mgenlog = 'Movie already in database, skipping: ' + item['title']
+            try:
+                mgenlog = 'Movie already in database, skipping: ' + item['title']
+                print(mgenlog)
+            except:
+                mgenlog = 'Movie already in database, skipping: ' + str(item['tmdb_id'])
+                print(mgenlog)            
             genLog(mgenlog)
-            print(mgenlog)
+
             found = 1
         else:
-            mgenlog = 'New movie found: ' + str(item['title'])
-            genLog(mgenlog)
-            print(mgenlog)
-            currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,      \
-            trTagline, trRelease_date, trImdb_id, trWebsite, trPoster_path, trBackdrop_path, trUser_rating,  \
-            trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1 ) values            \
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime, item['tmdb_id'],          \
-            item['uri'], mtype, item['title'],  item['description'], item['tagline'], item['release_date'],  \
-            item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'], item['user_rating'], \
-            str(item['genre']), str(item['production_company']), item['content_rating'],                     \
-            str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'], ))
-            db.commit()    
-            found = 0
+            try:
+                mgenlog = 'New movie found: ' + str(item['title'])
+                print(mgenlog)
+                genLog(mgenlog)
+                currTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                db.execute('INSERT into mTemp (dateAdded, tmdb_id, trailerUri, trType, trTitle, trOverview,      \
+                trTagline, trRelease_date, trImdb_id, trWebsite, trPoster_path, trBackdrop_path, trUser_rating,  \
+                trGenres, trProd_company, trContent_rating, trArtist_actor, trComposer, var1 ) values            \
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (currTime, item['tmdb_id'],          \
+                item['uri'], mtype, item['title'],  item['description'], item['tagline'], item['release_date'],  \
+                item['imdb_id'], item['website'], item['poster_uri'], item['backdrop_uri'], item['user_rating'], \
+                str(item['genre']), str(item['production_company']), item['content_rating'],                     \
+                str(item['artist_actor']), str(item['composer_director_creator']), item['album_series'], ))
+                db.commit()    
+                found = 0
+            except:
+                mgenlog = 'Unable to insert new movie found: ' + str(item['tmdb_id']) + ' into trailer database'
+                print(mgenlog)
+                genLog(mgenlog)
         db.close()
         return found
 
     except Exception as e:
-        print (e)
-        mgenlog = 'There was an error checking trailer details for: ' + str(item['itle'])
+        printexception()
+        mgenlog = 'There was an error checking trailer details for: ' + str(item['tmdb_id'])
         print(mgenlog)
         genLog(mgenlog)
         return found 
@@ -478,7 +488,7 @@ def checkDatabase():
         genLog(mgenlog)
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = "There was a problem verifying the trailer database file: " + trailerdb
         print(mgenlog)
         sys.exit()   
@@ -503,7 +513,7 @@ def updateTempHist(tmdb_id, trname, trsize, trres):                       # Upda
         db.commit()
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = "There was a problem updating the temp table: " + trailerdb
         print(mgenlog)
         genLog(mgenlog)  
@@ -570,7 +580,7 @@ def checkFormats(trailfile):                                             # Check
         return new_name
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = "There was a problem adjusting the output formats."
         print(mgenlog)
         genLog(mgenlog)  
@@ -633,7 +643,7 @@ def getArtwork(tmdb_id, posterUrl, backDropUrl):                         #  Get 
         print(mgenlog)
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was a problem fetching the trailer artwork'
         genLog(mgenlog)
         print(mgenlog)
@@ -728,7 +738,7 @@ def getTrailer(trailer, imdbtitle = ''):                   # Download You Tube \
             return [fetch_result, '0', '0', '0']
     
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was a problem getting the formats information'
         genLog(mgenlog)
         print(mgenlog)
@@ -759,7 +769,7 @@ def getFormats(trailer,imdbtitle = ''):             # Get available You Tube Tra
             return 'Error'
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = "There was a problem getting the trailer formats: " + trailer
         print(mgenlog)
         genLog(mgenlog) 
@@ -819,7 +829,7 @@ def checkFolders():                                # Check folders and files
   
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was a problem checking folders'
         genLog(mgenlog)
         print(mgenlog)    
@@ -886,7 +896,7 @@ def checkLimits():                                     # Check category limits
         return
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = "There was a problem checking limits "
         print(mgenlog)
         genLog(mgenlog) 
@@ -933,7 +943,7 @@ def moveTrailers(trfile):                           # Move trailers to trailer l
         #print(command)
         os.system(command)
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was a problem moving trailers to the trailer folder.'
         genLog(mgenlog)
         print(mgenlog)
@@ -990,7 +1000,7 @@ def writeCSV(filename, headers, recs):
             csvFile.writerow(recsencode)               
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'An error occurred creating the CSV file.'
         genLog(mgenlog)
         print(mgenlog)
@@ -1018,7 +1028,7 @@ def getTotals():                                             # Gets checked down
         return [daytuple[0], htottuple[0]]
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'An error occurred generating totals.'
         genLog(mgenlog)
         print(mgenlog)
@@ -1054,7 +1064,7 @@ def makeBackups():                                   # Make database backups
         print(mgenlog) 
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'An error occurred creating a Mezzmo Trailer Checker backup.'
         genLog(mgenlog)
         print(mgenlog)      
@@ -1149,7 +1159,7 @@ def checkUpdate(sysarg1):                             # Check for yt-dlp.exe upd
         genLog(mgenlog)
         print(mgenlog)
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = 'There was a problem checking for a yt-dlp.exe update.'
         genLog(mgenlog)
         print(mgenlog)
@@ -1331,10 +1341,22 @@ def displayStats(sysarg1):                            # Display statistics
             print ("\n\n")
 
     except Exception as e:
-        print (e)
+        printexception()
         mgenlog = "There was a problem displaying statistics "
         print(mgenlog)
-        genLog(mgenlog) 
+        genLog(mgenlog)
+
+
+def printexception():
+
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print('EXCEPTION IN ({0}, LINE {1} "{2}"): {3}'.format(filename, lineno, line.strip(),     \
+    exc_obj)) 
 
 
 checkVersion()                                               # Ensure Python version 3+

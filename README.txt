@@ -1,8 +1,14 @@
+v2.0.7 11/11/2024
+
+-  Improved exception handling reporting to make troubleshooting easier
+-  Fixed bug where TMDB trailer titles with nonprintable characters could
+   cause an exception error and trailer fetching to end prematurely.
+
 v2.0.6 10/19/2024
 
 -  Fixed new fetch counter limit bug where limit could be reached incorrectly
 -  Updated client code to support Windows 64 exe format
--  Added Windows x64 release format for client along with native Python  
+-  Added Windoww x64 release format for client along with native Python  
 
 v2.0.5 8/18/2024
 

@@ -242,7 +242,7 @@ def mezzmo_get_plugins(language):
     plugin = MezzmoPluginContentProvider()
     plugin.id = "mezzmo.plugin.MovieTrailers2"
     plugin.title = "Movie Trailers 2"
-    plugin.version = "2.0.5"
+    plugin.version = "2.0.7"
     plugin.author = "Conceiva Pty. Ltd., jbinkley60"
     plugin.web_link = "https://www.themoviedb.org/"
     plugin.description = 'View movie trailers for current and upcoming movie releases.\n\nTrailer information provided by www.themoviedb.org.'
