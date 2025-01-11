@@ -57,7 +57,7 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 
 <br>          
 
-Visit the <a href="https://github.com/jbinkley60/MovieTrailer/wiki">Mezzmo Movie Trailers Channel wiki</a> for the latest information.          
+Visit the <a href="https://github.com/jbinkley60/MezzmoMovieTrailer/wiki">Mezzmo Movie Trailers Channel wiki</a> for the latest information.          
 
            
 <br/><img src="https://github.com/user-attachments/assets/9b840023-1135-44f2-9e83-44ec66a0bf7f" width="40%" height="40%">
