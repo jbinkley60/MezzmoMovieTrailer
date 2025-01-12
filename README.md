@@ -35,7 +35,7 @@ Add a channel to your Mezzmo server to view movie trailers from <a href="https:/
 -  Open a command window and run movie_trailers.py trailers now<br/>
    See optional command line arguments below.
 -  The client will build the database, check folder locations and download the movie trailers requested
--  Next install the <a href="http://www.mezzmo.com/wiki/doku.php?id=adding_channels">Mezzmo Movie Trailers Channel 2</a> into Mezzmo
+-  Next install the <a href="https://github.com/jbinkley60/MezzmoKodiPlugin/wiki/Mezzmo-Server-User-Guide#adding-online-channels">Mezzmo Movie Trailers Channel 2</a> into Mezzmo
 -  Open the Mezzmo Movie Trailers Channel 2 in the Mezzmo GUI and set the trailer path location in Properties->Settings
 -  You should see the trailers downloaded by the client appear in the Mezzmo GUI       
 
